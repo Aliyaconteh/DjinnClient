@@ -69,12 +69,9 @@ export default function Home() {
           <div>
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-200">
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              Final year real-time quiz system
+            Welcome to QuizRoom
             </div>
 
-            <h1 className="max-w-3xl text-5xl font-black leading-[1.05] text-white sm:text-6xl lg:text-7xl">
-              QuizRoom
-            </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
               A multiplayer quiz platform for creating quizzes, hosting live rooms,

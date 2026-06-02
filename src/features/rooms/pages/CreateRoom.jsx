@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 import { socket } from "../../../services/socket/socket";
 import { useRoom } from "../../../context/RoomContext";
@@ -12,6 +12,8 @@ const demoHostUser = {
 
 export default function CreateRoom() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedQuizId = searchParams.get("quizId");
   const { setRoom } = useRoom();
 
   const [roomName, setRoomName] = useState("");
@@ -36,7 +38,8 @@ export default function CreateRoom() {
         setQuizzes(quizzesArray);
 
         if (quizzesArray.length > 0) {
-          setQuizId(quizzesArray[0].id);
+          const requestedQuiz = quizzesArray.find((quiz) => quiz.id === requestedQuizId);
+          setQuizId(requestedQuiz?.id || quizzesArray[0].id);
         }
 
         setLoadingQuizzes(false);
@@ -45,7 +48,7 @@ export default function CreateRoom() {
         setError("Failed to load quizzes. Create a quiz first, then come back to create a room.");
         setLoadingQuizzes(false);
       });
-  }, []);
+  }, [requestedQuizId]);
 
   useEffect(() => {
     const onConnect = () => setConnected(true);
@@ -174,7 +177,7 @@ export default function CreateRoom() {
             onClick={() => navigate(`/waiting-room/${createdRoomCode}`)}
             className="w-full bg-blue-600 py-3 rounded"
           >
-            Enter Waiting Room →
+            Enter Waiting Room
           </button>
         </div>
       </div>

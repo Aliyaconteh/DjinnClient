@@ -89,7 +89,7 @@ export default function QuizList() {
                 </button>
               </div>
               <button
-                onClick={() => navigate("/create-room")}
+                onClick={() => navigate(`/create-room?quizId=${encodeURIComponent(quiz.id)}`)}
                 className="mt-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 font-bold"
               >
                 Use for Room

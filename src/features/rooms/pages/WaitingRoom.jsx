@@ -219,7 +219,7 @@ export default function WaitingRoom() {
             disabled={starting || !room?.players || room.players.length === 0}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800/50 disabled:text-slate-500 font-black py-4 rounded-2xl transition duration-300 shadow-xl shadow-blue-500/10 text-lg flex items-center justify-center gap-2"
           >
-            {starting ? "Starting..." : "🚀 Start Quiz Session"}
+            {starting ? "Starting..." : "Start Quiz Session"}
           </button>
         ) : (
           <div className="text-center bg-slate-900/50 border border-slate-800 rounded-2xl py-4 text-slate-400 text-sm">
