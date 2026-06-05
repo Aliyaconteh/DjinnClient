@@ -1,16 +1,20 @@
 import { BarChart3, Home, ListChecks, PlusCircle, Trophy, Users } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const links = [
   { to: "/", label: "Home", icon: Home },
+  { to: "/signUp", label: "Sign Up", icon: Users },
   { to: "/quizzes", label: "Quizzes", icon: ListChecks },
   { to: "/create-room", label: "Create", icon: PlusCircle },
   { to: "/join-room", label: "Join", icon: Users },
   { to: "/leaderboard", label: "Scores", icon: Trophy },
-  { to: "/sync-analysis", label: "Analysis", icon: BarChart3 }
+  { to: "/sync-analysis", label: "Analysis", icon: BarChart3 },
+  { to: "/signIn", label: "Sign In", icon: Users },
 ];
 
 export default function Navbar() {
+  const { isAuthenticated } = useAuth();
   return (
     <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
       <nav className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
@@ -26,6 +30,8 @@ export default function Navbar() {
 
         <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 p-1">
           {links.map(({ to, label, icon: Icon }) => (
+            // hide Sign In and Sign Up links when user is authenticated
+            ((to === "/signIn" || to === "/signUp") && isAuthenticated) ? null : (
             <NavLink
               key={to}
               to={to}
@@ -40,6 +46,7 @@ export default function Navbar() {
               <Icon size={16} aria-hidden="true" />
               <span>{label}</span>
             </NavLink>
+            )
           ))}
         </div>
       </nav>

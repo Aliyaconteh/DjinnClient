@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiUrl } from "../../../config/api";
+import { useAuth } from "../../../context/AuthContext";
 
 const emptyQuestion = () => ({
   question: "",
@@ -11,10 +11,17 @@ const emptyQuestion = () => ({
 
 export default function CreateQuiz() {
   const navigate = useNavigate();
+  const { authFetch, user, isAuthenticated, loading: authLoading } = useAuth();
   const [title, setTitle] = useState("");
   const [questions, setQuestions] = useState([emptyQuestion()]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate(`/signIn?redirect=${encodeURIComponent(window.location.pathname)}`);
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const updateQuestion = (index, updates) => {
     setQuestions((items) => items.map((item, i) => (i === index ? { ...item, ...updates } : item)));
@@ -43,16 +50,16 @@ export default function CreateQuiz() {
 
     setSaving(true);
     try {
-      const quizResponse = await fetch(apiUrl("/api/quizzes"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim(), created_by: null })
-      }).then((res) => res.json());
+        const quizResponse = await authFetch("/api/quizzes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: title.trim(), created_by: user.id })
+        }).then((res) => res.json());
 
       if (!quizResponse.success) throw new Error(quizResponse.message || "Could not create quiz");
 
       for (const item of questions) {
-        const questionResponse = await fetch(apiUrl("/api/quizzes/question"), {
+        const questionResponse = await authFetch("/api/quizzes/question", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Trash2 } from "lucide-react";
-import { apiUrl } from "../../../config/api";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function QuizList() {
   const navigate = useNavigate();
+  const { authFetch } = useAuth();
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState("");
+  const [confirmDeleteQuiz, setConfirmDeleteQuiz] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(apiUrl("/api/quizzes"))
+    authFetch("/api/quizzes")
       .then((res) => res.json())
       .then((response) => {
         if (!response.success) throw new Error(response.message || "Failed to load quizzes");
@@ -21,27 +23,35 @@ export default function QuizList() {
       .finally(() => setLoading(false));
   }, []);
 
-  const deleteQuiz = async (quiz) => {
-    const confirmed = window.confirm(`Delete "${quiz.title}"? This will also remove its questions.`);
-    if (!confirmed) return;
+  const deleteQuiz = (quiz) => {
+    // open confirmation modal
+    setConfirmDeleteQuiz(quiz);
+  };
 
+  const confirmDelete = async () => {
+    if (!confirmDeleteQuiz) return;
+
+    const quiz = confirmDeleteQuiz;
     setDeletingId(quiz.id);
     setError("");
 
     try {
-      const response = await fetch(apiUrl(`/api/quizzes/${quiz.id}`), {
-        method: "DELETE"
-      }).then((res) => res.json());
+      const response = await authFetch(`/api/quizzes/${quiz.id}`, { method: "DELETE" }).then((res) =>
+        res.json()
+      );
 
       if (!response.success) throw new Error(response.message || "Failed to delete quiz");
 
       setQuizzes((items) => items.filter((item) => item.id !== quiz.id));
+      setConfirmDeleteQuiz(null);
     } catch (err) {
       setError(err.message);
     } finally {
       setDeletingId("");
     }
   };
+
+  const cancelDelete = () => setConfirmDeleteQuiz(null);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white px-4 py-10">
@@ -111,6 +121,34 @@ export default function QuizList() {
           </div>
         )}
       </div>
+      {/* Confirmation modal */}
+      {confirmDeleteQuiz && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={cancelDelete} />
+          <div className="relative z-10 w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <h3 className="text-lg font-bold mb-2">Delete "{confirmDeleteQuiz.title}"?</h3>
+            <p className="text-sm text-slate-400 mb-6">This will also remove its questions.</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelDelete}
+                className="rounded-lg bg-slate-800 hover:bg-slate-700 px-4 py-2"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deletingId === confirmDeleteQuiz.id}
+                className="rounded-lg bg-red-600 hover:bg-red-700 px-4 py-2 font-bold disabled:opacity-60 flex items-center gap-2"
+              >
+                {deletingId === confirmDeleteQuiz.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

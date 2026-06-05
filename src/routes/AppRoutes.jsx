@@ -2,6 +2,9 @@ import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 
 import Home from "../pages/Home";
 import MainLayout from "../layouts/MainLayout";
+import SignIn from "../features/auth/pages/SignIn";
+import SignUp from "../features/auth/pages/SignUp";
+import RequireAuth from "../features/auth/RequireAuth";
 import CreateRoom from "../features/rooms/pages/CreateRoom";
 import JoinRoom from "../features/rooms/pages/JoinRoom";
 import WaitingRoom from "../features/rooms/pages/WaitingRoom";
@@ -55,15 +58,12 @@ export default function AppRoutes() {
           element={<Leaderboard />}
         />
 
-        <Route
-          path="/quizzes"
-          element={<QuizList />}
-        />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
 
-        <Route
-          path="/quizzes/create"
-          element={<CreateQuiz />}
-        />
+        <Route path="/quizzes" element={<RequireAuth><QuizList /></RequireAuth>} />
+
+        <Route path="/quizzes/create" element={<RequireAuth><CreateQuiz /></RequireAuth>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
 

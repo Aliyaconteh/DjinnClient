@@ -3,12 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 import { socket } from "../../../services/socket/socket";
 import { useRoom } from "../../../context/RoomContext";
-import { apiUrl } from "../../../config/api";
-
-const demoHostUser = {
-  id: "7c0e7d5d-bf7c-4a2f-8e7f-34d1d52caa90",
-  username: "Aliya"
-};
+import { useAuth } from "../../../context/AuthContext";
 
 export default function CreateRoom() {
   const navigate = useNavigate();
@@ -30,8 +25,17 @@ export default function CreateRoom() {
     ? `${window.location.origin}/join-room?roomCode=${encodeURIComponent(createdRoomCode)}`
     : "";
 
+  const { authFetch, user, isAuthenticated, loading: authLoading } = useAuth();
+
+  // Require authentication to create a room
   useEffect(() => {
-    fetch(apiUrl("/api/quizzes"))
+    if (!authLoading && !isAuthenticated) {
+      navigate(`/signIn?redirect=${encodeURIComponent(window.location.pathname)}`);
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  useEffect(() => {
+    authFetch("/api/quizzes")
       .then(res => res.json())
       .then(response => {
         const quizzesArray = response?.data || response || [];
@@ -48,7 +52,7 @@ export default function CreateRoom() {
         setError("Failed to load quizzes. Create a quiz first, then come back to create a room.");
         setLoadingQuizzes(false);
       });
-  }, [requestedQuizId]);
+  }, [requestedQuizId, authFetch]);
 
   useEffect(() => {
     const onConnect = () => setConnected(true);
@@ -74,10 +78,10 @@ export default function CreateRoom() {
     setError("");
     const hostUsername = roomName.trim();
     localStorage.setItem("username", hostUsername);
-    localStorage.setItem("playerId", demoHostUser.id);
+    localStorage.setItem("playerId", user.id);
 
     const payload = {
-      hostId: demoHostUser.id,
+      hostId: user.id,
       username: hostUsername,
       quizId,
       roomName: roomName.trim(),
@@ -87,7 +91,7 @@ export default function CreateRoom() {
     };
 
     try {
-      const res = await fetch(apiUrl("/api/rooms/create"), {
+      const res = await authFetch("/api/rooms/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -105,7 +109,7 @@ export default function CreateRoom() {
         socket.emit("join-room", {
           roomCode,
           player: {
-            id: demoHostUser.id,
+            id: user.id,
             username: hostUsername
           }
         });
@@ -118,7 +122,7 @@ export default function CreateRoom() {
           roomName,
           quizId,
           isHost: true,
-          hostId: demoHostUser.id
+          hostId: user.id
         });
       } else {
         setError(result.message || "Room creation failed");

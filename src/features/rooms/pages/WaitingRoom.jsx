@@ -59,7 +59,7 @@ export default function WaitingRoom() {
 
     // 2. Setup socket listeners
     const handleRoomUpdate = (updatedRoom) => {
-      console.log("Room update received via socket:", updatedRoom);
+      console.debug("Room update received via socket:", updatedRoom);
       setRoom((prev) => ({
         ...prev,
         ...updatedRoom,
@@ -68,7 +68,7 @@ export default function WaitingRoom() {
     };
 
     const handleRoomStarted = (data) => {
-      console.log("Room started event received:", data);
+      console.debug("Room started event received:", data);
       navigate(`/game/${roomCode}`);
     };
 
