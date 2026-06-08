@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Trash2 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
+import { useToast } from "../../../components/ui/ToastContext";
+import Skeleton from "../../../components/ui/Skeleton";
 
 export default function QuizList() {
   const navigate = useNavigate();
-  const { authFetch } = useAuth();
+  const { authFetch, isAuthenticated, loading: authLoading } = useAuth();
+  const { addToast } = useToast();
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState("");
@@ -13,15 +16,21 @@ export default function QuizList() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (authLoading) return; // wait until auth initialized
+    if (!isAuthenticated) return; // require auth
+
     authFetch("/api/quizzes")
       .then((res) => res.json())
       .then((response) => {
         if (!response.success) throw new Error(response.message || "Failed to load quizzes");
         setQuizzes(response.data || []);
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        setError(err.message);
+        addToast(err.message, { type: "error" });
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [authFetch, isAuthenticated, authLoading, addToast]);
 
   const deleteQuiz = (quiz) => {
     // open confirmation modal
@@ -44,6 +53,7 @@ export default function QuizList() {
 
       setQuizzes((items) => items.filter((item) => item.id !== quiz.id));
       setConfirmDeleteQuiz(null);
+      addToast("Quiz deleted", { type: "info" });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -108,7 +118,11 @@ export default function QuizList() {
           ))}
         </div>
 
-        {loading && <p className="text-slate-400">Loading quizzes...</p>}
+        {loading && (
+          <div className="grid md:grid-cols-2 gap-4">
+            <Skeleton count={4} />
+          </div>
+        )}
         {!loading && !quizzes.length && (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
             <p className="text-slate-300 mb-5">No quizzes found. Create one to start a room.</p>

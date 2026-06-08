@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { socket } from "../../../services/socket/socket";
 import ScoreBoard from "../../../components/game/ScoreBoard";
 import { useGame } from "../../../context/GameContext";
+import { useToast } from "../../../components/ui/ToastContext";
 
 export default function GameRoom() {
   const { roomCode } = useParams();
@@ -25,6 +26,7 @@ export default function GameRoom() {
   const [feedback, setFeedback] = useState("");
   const [questionNumber, setQuestionNumber] = useState(0);
   const [error, setError] = useState("");
+  const { addToast } = useToast();
 
   const username = useMemo(() => localStorage.getItem("username") || "Guest", []);
   const playerId = useMemo(() => localStorage.getItem("playerId") || socket.id, []);
@@ -68,7 +70,9 @@ export default function GameRoom() {
     };
 
     const handleError = (data) => {
-      setError(data.message || "Something went wrong in the game room.");
+      const msg = data.message || "Something went wrong in the game room.";
+      setError(msg);
+      addToast(msg, { type: "error" });
       setAnswerStatus("idle");
     };
 
@@ -100,7 +104,8 @@ export default function GameRoom() {
     setQuestionsAnswered,
     setTimeRemaining,
     setTotalQuestions,
-    username
+    username,
+    addToast
   ]);
 
   const submitAnswer = (answer) => {

@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { apiUrl } from "../../../config/api";
+import { useToast } from "../../../components/ui/ToastContext";
 
 export default function SignUp() {
   const navigate = useNavigate();
   const { login, setError } = useAuth();
+  const { addToast } = useToast();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,7 +17,7 @@ export default function SignUp() {
   const signUp = async () => {
     if (password !== confirm) {
       setError("Passwords do not match");
-      alert("Passwords do not match");
+      addToast("Passwords do not match", { type: "error" });
       return;
     }
 
@@ -37,7 +39,7 @@ export default function SignUp() {
       navigate("/quizzes");
     } catch (err) {
       setError(err.message);
-      alert(err.message);
+      addToast(err.message, { type: "error" });
     } finally {
       setLoading(false);
     }

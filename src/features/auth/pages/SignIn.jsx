@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { apiUrl } from "../../../config/api";
+import { useToast } from "../../../components/ui/ToastContext";
 
 export default function SignIn() {
   const navigate = useNavigate();
   const { login, setError } = useAuth();
+  const { addToast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,7 +33,7 @@ export default function SignIn() {
       navigate("/quizzes");
     } catch (err) {
       setError(err.message);
-      alert(err.message);
+      addToast(err.message, { type: "error" });
     } finally {
       setLoading(false);
     }

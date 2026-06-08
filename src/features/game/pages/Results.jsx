@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGame } from "../../../context/GameContext";
 import { apiUrl } from "../../../config/api";
+import { useToast } from "../../../components/ui/ToastContext";
 
 export default function Results() {
   const { roomCode } = useParams();
@@ -9,6 +10,7 @@ export default function Results() {
   const { leaderboard, setLeaderboard, resetGame } = useGame();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { addToast } = useToast();
 
   useEffect(() => {
     if (leaderboard?.length) return;
@@ -19,9 +21,12 @@ export default function Results() {
         if (!response.success) throw new Error(response.message || "Could not load results");
         setLeaderboard(response.data || []);
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        setError(err.message);
+        addToast(err.message, { type: "error" });
+      })
       .finally(() => setLoading(false));
-  }, [leaderboard?.length, roomCode, setLeaderboard]);
+  }, [leaderboard?.length, roomCode, setLeaderboard, addToast]);
 
   const sorted = useMemo(
     () => [...(leaderboard || [])].sort((a, b) => Number(b.score || 0) - Number(a.score || 0)),

@@ -3,12 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { socket } from "../../../services/socket/socket";
 import { useRoom } from "../../../context/RoomContext";
 import { apiUrl } from "../../../config/api";
+import { useToast } from "../../../components/ui/ToastContext";
 
 export default function WaitingRoom() {
   const { roomCode } = useParams();
   const navigate = useNavigate();
   const { room, setRoom } = useRoom();
   const initialHostRef = useRef(room?.isHost || false);
+
+  const { addToast } = useToast();
 
   const [loading, setLoading] = useState(!room || !room.players);
   const [error, setError] = useState("");
@@ -106,10 +109,10 @@ export default function WaitingRoom() {
         // Emit socket event to notify all connected sockets to start
         socket.emit("start-game", { roomCode, quizId: room?.quizId });
       } else {
-        alert(result.message || "Failed to start quiz");
+        addToast(result.message || "Failed to start quiz", { type: "error" });
       }
     } catch (err) {
-      alert("Error starting quiz: " + err.message);
+      addToast("Error starting quiz: " + err.message, { type: "error" });
     } finally {
       setStarting(false);
     }

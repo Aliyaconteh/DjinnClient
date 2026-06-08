@@ -1,78 +1,124 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
+import { Check, ChevronDown, Copy, Link2, LogIn, PlusCircle, Wifi, WifiOff } from "lucide-react";
 import { socket } from "../../../services/socket/socket";
 import { useRoom } from "../../../context/RoomContext";
+import { useToast } from "../../../components/ui/ToastContext";
+import Skeleton from "../../../components/ui/Skeleton";
 import { useAuth } from "../../../context/AuthContext";
 
+// ── dot-grid SVG background (matches JoinRoom) ───────────────────────────────
+function BackgroundGrid() {
+  return (
+    <svg aria-hidden="true" className="absolute inset-0 w-full h-full opacity-[0.035] pointer-events-none">
+      <defs>
+        <pattern id="cr-dots" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
+          <circle cx="1.5" cy="1.5" r="1.5" fill="#6366f1" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#cr-dots)" />
+    </svg>
+  );
+}
+
+// ── copy button with transient ✓ feedback ─────────────────────────────────────
+function CopyButton({ text, label, variant = "secondary" }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const base = "flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200";
+  const styles = {
+    primary: "bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-[0_4px_16px_rgba(99,102,241,0.3)] hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(99,102,241,0.4)]",
+    secondary: "bg-[#0f1520] border border-slate-700/50 text-slate-300 hover:border-indigo-500/40 hover:text-white hover:bg-indigo-500/[0.07]",
+  };
+
+  return (
+    <button onClick={handleCopy} className={`${base} ${styles[variant]}`} style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      {copied ? <Check size={15} className="text-emerald-400" /> : variant === "primary" ? <Copy size={15} /> : <Link2 size={15} />}
+      {copied ? "Copied!" : label}
+    </button>
+  );
+}
+
+// ── main ──────────────────────────────────────────────────────────────────────
 export default function CreateRoom() {
-  const navigate = useNavigate();
+  const navigate       = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedQuizId = searchParams.get("quizId");
-  const { setRoom } = useRoom();
+  const { setRoom }    = useRoom();
+  const { addToast }   = useToast();
+  const { authFetch, user, isAuthenticated, loading: authLoading } = useAuth();
 
-  const [roomName, setRoomName] = useState("");
-  const [quizId, setQuizId] = useState("");
-
-  const [quizzes, setQuizzes] = useState([]);
+  const [roomName,       setRoomName]       = useState("");
+  const [quizId,         setQuizId]         = useState("");
+  const [quizzes,        setQuizzes]        = useState([]);
   const [loadingQuizzes, setLoadingQuizzes] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [connected, setConnected] = useState(socket.connected);
-  const [roomCreated, setRoomCreated] = useState(false);
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState("");
+  const [connected,      setConnected]      = useState(socket.connected);
+  const [roomCreated,    setRoomCreated]    = useState(false);
   const [createdRoomCode, setCreatedRoomCode] = useState("");
+  const [mounted,        setMounted]        = useState(false);
+
   const joinUrl = createdRoomCode
     ? `${window.location.origin}/join-room?roomCode=${encodeURIComponent(createdRoomCode)}`
     : "";
 
-  const { authFetch, user, isAuthenticated, loading: authLoading } = useAuth();
+  // entrance animation
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 30);
+    return () => clearTimeout(t);
+  }, []);
 
-  // Require authentication to create a room
+  // auth guard
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       navigate(`/signIn?redirect=${encodeURIComponent(window.location.pathname)}`);
     }
   }, [isAuthenticated, authLoading, navigate]);
 
+  // load quizzes
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
     authFetch("/api/quizzes")
       .then(res => res.json())
       .then(response => {
-        const quizzesArray = response?.data || response || [];
-        setQuizzes(quizzesArray);
-
-        if (quizzesArray.length > 0) {
-          const requestedQuiz = quizzesArray.find((quiz) => quiz.id === requestedQuizId);
-          setQuizId(requestedQuiz?.id || quizzesArray[0].id);
+        const arr = response?.data || response || [];
+        setQuizzes(arr);
+        if (arr.length > 0) {
+          const requested = arr.find(q => q.id === requestedQuizId);
+          setQuizId(requested?.id || arr[0].id);
         }
-
         setLoadingQuizzes(false);
       })
       .catch(() => {
-        setError("Failed to load quizzes. Create a quiz first, then come back to create a room.");
+        const msg = "Failed to load quizzes. Create a quiz first, then come back.";
+        setError(msg);
+        addToast(msg, { type: "error" });
         setLoadingQuizzes(false);
       });
-  }, [requestedQuizId, authFetch]);
+  }, [requestedQuizId, authFetch, authLoading, isAuthenticated, addToast]);
 
+  // socket connection status
   useEffect(() => {
-    const onConnect = () => setConnected(true);
+    const onConnect    = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
-
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
-
     if (!socket.connected) socket.connect();
-
-    return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-    };
+    return () => { socket.off("connect", onConnect); socket.off("disconnect", onDisconnect); };
   }, []);
 
   const handleCreateRoom = async () => {
-    if (!roomName.trim()) return setError("Room name required");
-    if (!quizId) return setError("Select a quiz");
-    if (!connected) return setError("WebSocket not connected");
+    if (!roomName.trim()) { const m = "Room name is required"; setError(m); addToast(m, { type: "error" }); return; }
+    if (!quizId)          { const m = "Select a quiz";         setError(m); addToast(m, { type: "error" }); return; }
+    if (!connected)       { const m = "Not connected to server"; setError(m); addToast(m, { type: "error" }); return; }
 
     setLoading(true);
     setError("");
@@ -80,162 +126,291 @@ export default function CreateRoom() {
     localStorage.setItem("username", hostUsername);
     localStorage.setItem("playerId", user.id);
 
-    const payload = {
-      hostId: user.id,
-      username: hostUsername,
-      quizId,
-      roomName: roomName.trim(),
-      syncMode: "server",
-      delayLevel: "medium",
-      delayMs: null
-    };
-
     try {
       const res = await authFetch("/api/rooms/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          hostId: user.id, username: hostUsername, quizId,
+          roomName: roomName.trim(), syncMode: "server", delayLevel: "medium", delayMs: null,
+        }),
       });
-
       const result = await res.json();
 
       if (result.success) {
         const room = result.data;
         const roomCode = room.room_code;
-
         setCreatedRoomCode(roomCode);
         setRoomCreated(true);
-
-        socket.emit("join-room", {
-          roomCode,
-          player: {
-            id: user.id,
-            username: hostUsername
-          }
-        });
-
-        setRoom({
-          id: room.id,
-          code: roomCode,
-          roomCode,
-          name: roomName,
-          roomName,
-          quizId,
-          isHost: true,
-          hostId: user.id
-        });
+        socket.emit("join-room", { roomCode, player: { id: user.id, username: hostUsername } });
+        setRoom({ id: room.id, code: roomCode, roomCode, name: roomName, roomName, quizId, isHost: true, hostId: user.id });
       } else {
-        setError(result.message || "Room creation failed");
+        const m = result.message || "Room creation failed";
+        setError(m);
+        addToast(m, { type: "error" });
       }
     } catch (err) {
-      setError("Network error: " + err.message);
+      const m = "Network error: " + err.message;
+      setError(m);
+      addToast(m, { type: "error" });
     } finally {
       setLoading(false);
     }
   };
 
+  // ── loading skeleton ────────────────────────────────────────────────────────
   if (loadingQuizzes) {
-    return <div className="text-white p-8">Loading quizzes...</div>;
-  }
-
-  if (roomCreated) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-slate-800 rounded-2xl p-8 text-center border border-slate-700">
-          <h1 className="text-3xl text-white mb-4">Room Created!</h1>
-
-          <div className="bg-slate-700 p-6 rounded-xl mb-4">
-            <p className="text-emerald-400 text-4xl font-mono">
-              {createdRoomCode}
-            </p>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl mb-4 inline-block">
-            <QRCodeCanvas
-              value={joinUrl}
-              size={210}
-              level="H"
-              includeMargin
-            />
-          </div>
-
-          <p className="text-slate-300 text-sm mb-4">
-            Scan this QR code to open the join page with the room code filled in.
-          </p>
-
-          <button
-            onClick={() => navigator.clipboard.writeText(createdRoomCode)}
-            className="w-full bg-emerald-600 py-2 rounded mb-3"
-          >
-            Copy Code
-          </button>
-
-          <button
-            onClick={() => navigator.clipboard.writeText(joinUrl)}
-            className="w-full bg-slate-700 py-2 rounded mb-3 text-white"
-          >
-            Copy Join Link
-          </button>
-
-          <button
-            onClick={() => navigate(`/waiting-room/${createdRoomCode}`)}
-            className="w-full bg-blue-600 py-3 rounded"
-          >
-            Enter Waiting Room
-          </button>
+      <div className="min-h-screen bg-[#060a0f] flex items-center justify-center p-6">
+        <div className="w-full max-w-[440px]">
+              <Skeleton count={3} size="lg" />
         </div>
       </div>
     );
   }
 
+  // ── success / share view ────────────────────────────────────────────────────
+  if (roomCreated) {
+    return (
+      <>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+          @keyframes cr-pop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+          @keyframes cr-shimmer { 0% { left:-60%; } 100% { left:160%; } }
+          .cr-btn-shine { position: relative; overflow: hidden; }
+          .cr-btn-shine::after {
+            content: ''; position: absolute; inset-block: 0; left: -60%; width: 40%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.13), transparent);
+            transform: skewX(-15deg); animation: cr-shimmer 2.8s infinite;
+          }
+        `}</style>
+        <div className="min-h-screen bg-[#060a0f] flex items-center justify-center p-6 relative overflow-hidden" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <BackgroundGrid />
+          {/* blobs */}
+          <div className="absolute w-[500px] h-[500px] rounded-full bg-indigo-500/10 blur-[100px] -top-40 -right-32 pointer-events-none" />
+          <div className="absolute w-[360px] h-[360px] rounded-full bg-violet-500/10 blur-[80px] -bottom-20 -left-20 pointer-events-none" />
+
+          <div className="relative w-full max-w-[420px] bg-[#0d131c]/90 border border-indigo-500/[0.15] rounded-3xl px-8 py-10 shadow-2xl"
+               style={{ animation: "cr-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+            {/* top shimmer line */}
+            <div className="absolute top-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent rounded-full" />
+
+            {/* success badge */}
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+                <Check size={15} className="text-emerald-400" />
+              </div>
+              <span className="text-[0.7rem] font-semibold tracking-[0.12em] uppercase text-emerald-400">
+                Room Ready
+              </span>
+            </div>
+
+            <h1 className="text-[1.85rem] font-extrabold text-slate-100 mb-1 leading-tight"
+                style={{ fontFamily: "'Syne', sans-serif", letterSpacing: "-0.03em" }}>
+              Share &amp;{" "}
+              <em className="not-italic bg-gradient-to-br from-indigo-400 to-violet-400 bg-clip-text text-transparent">
+                Invite
+              </em>
+            </h1>
+            <p className="text-sm text-slate-500 mb-7">Players can join using the code or QR scan</p>
+
+            {/* room code display */}
+            <div className="bg-[#0a0f1a] border border-indigo-500/20 rounded-2xl p-5 mb-4 text-center">
+              <p className="text-[0.65rem] font-semibold tracking-[0.15em] uppercase text-slate-600 mb-2">Room Code</p>
+              <p className="text-5xl font-extrabold tracking-[0.18em] text-indigo-300"
+                 style={{ fontFamily: "'Syne', monospace" }}>
+                {createdRoomCode}
+              </p>
+            </div>
+
+            {/* QR code */}
+            <div className="flex justify-center mb-4">
+              <div className="bg-white p-4 rounded-2xl shadow-[0_0_32px_rgba(99,102,241,0.15)]">
+                <QRCodeCanvas value={joinUrl} size={180} level="H" includeMargin={false} />
+              </div>
+            </div>
+
+            <p className="text-center text-[0.75rem] text-slate-600 mb-5">
+              Scan to open the join page with the code pre-filled
+            </p>
+
+            {/* copy actions */}
+            <div className="flex flex-col gap-2.5 mb-5">
+              <CopyButton text={createdRoomCode} label="Copy Room Code" variant="primary" />
+              <CopyButton text={joinUrl} label="Copy Join Link" variant="secondary" />
+            </div>
+
+            {/* enter waiting room */}
+            <button
+              onClick={() => navigate(`/waiting-room/${createdRoomCode}`)}
+              className="cr-btn-shine w-full py-3.5 rounded-2xl font-bold text-[0.9375rem] text-white bg-gradient-to-br from-emerald-600 to-emerald-500 shadow-[0_4px_20px_rgba(16,185,129,0.28)] hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(16,185,129,0.4)] active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2"
+              style={{ fontFamily: "'Syne', sans-serif" }}
+            >
+              <LogIn size={16} />
+              Enter Waiting Room
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ── create form ─────────────────────────────────────────────────────────────
+  const canSubmit = !loading && !!quizzes.length && !!roomName.trim();
+
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="max-w-lg w-full bg-slate-800 p-6 rounded-xl">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+        @keyframes cr-shimmer { 0% { left:-60%; } 100% { left:160%; } }
+        .cr-btn-shine { position: relative; overflow: hidden; }
+        .cr-btn-shine::after {
+          content: ''; position: absolute; inset-block: 0; left: -60%; width: 40%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.13), transparent);
+          transform: skewX(-15deg); animation: cr-shimmer 2.8s infinite;
+        }
+        /* custom select arrow */
+        .cr-select { appearance: none; -webkit-appearance: none; }
+      `}</style>
 
-        <h1 className="text-white text-2xl mb-4">Create Room</h1>
+      <div
+        className={`min-h-screen bg-[#060a0f] flex items-center justify-center p-6 relative overflow-hidden transition-opacity duration-700 ${mounted ? "opacity-100" : "opacity-0"}`}
+        style={{ fontFamily: "'DM Sans', sans-serif" }}
+      >
+        <BackgroundGrid />
+        {/* blobs */}
+        <div className="absolute w-[520px] h-[520px] rounded-full bg-indigo-500/10 blur-[90px] -top-32 -right-36 pointer-events-none" />
+        <div className="absolute w-[380px] h-[380px] rounded-full bg-violet-500/10 blur-[80px] -bottom-20 -left-16 pointer-events-none" />
 
-        {error && <p className="text-red-400 mb-3">{error}</p>}
-
-        <input
-          value={roomName}
-          onChange={e => setRoomName(e.target.value)}
-          placeholder="Room name"
-          className="w-full mb-3 p-2 bg-slate-700 text-white"
-        />
-
-        <select
-          value={quizId}
-          onChange={e => setQuizId(e.target.value)}
-          className="w-full mb-3 p-2 bg-slate-700 text-white"
+        {/* card */}
+        <div
+          className={`relative w-full max-w-[440px] bg-[#0d131c]/90 border border-indigo-500/[0.14] rounded-3xl px-8 py-10 shadow-2xl transition-all duration-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}
         >
-          {!quizzes.length && (
-            <option value="">No quizzes available</option>
-          )}
-          {quizzes.map(q => (
-            <option key={q.id} value={q.id}>
-              {q.title}
-            </option>
-          ))}
-        </select>
+          {/* top shimmer line */}
+          <div className="absolute top-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent rounded-full" />
 
-        <button
-          onClick={handleCreateRoom}
-          disabled={loading || !quizzes.length}
-          className="w-full bg-blue-600 py-2 text-white rounded"
-        >
-          {loading ? "Creating..." : "Create Room"}
-        </button>
+          {/* badge row */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="inline-flex items-center gap-1.5 text-[0.68rem] font-semibold tracking-[0.12em] uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1">
+              <PlusCircle size={11} />
+              New Room
+            </div>
+            {/* connection indicator */}
+            <div className={`inline-flex items-center gap-1.5 text-[0.65rem] font-semibold tracking-[0.08em] uppercase rounded-full px-2.5 py-1 border ${connected ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" : "text-red-400 bg-red-500/10 border-red-500/20"}`}>
+              {connected ? <Wifi size={10} /> : <WifiOff size={10} />}
+              {connected ? "Live" : "Offline"}
+            </div>
+          </div>
 
-        {!quizzes.length && (
-          <button
-            onClick={() => navigate("/quizzes/create")}
-            className="w-full mt-3 bg-emerald-600 py-2 text-white rounded"
+          {/* heading */}
+          <h1
+            className="text-[2rem] font-extrabold text-slate-100 leading-tight mb-1.5"
+            style={{ fontFamily: "'Syne', sans-serif", letterSpacing: "-0.03em" }}
           >
-            Create Quiz
-          </button>
-        )}
+            Create a{" "}
+            <em className="not-italic bg-gradient-to-br from-indigo-400 to-violet-400 bg-clip-text text-transparent">
+              Room
+            </em>
+          </h1>
+          <p className="text-sm text-slate-500 mb-8">Set up a quiz room and invite your players</p>
 
+          {/* error banner */}
+          {error && (
+            <div className="flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 flex-shrink-0" />
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-5">
+            {/* room name */}
+            <div>
+              <div className="text-[0.68rem] font-semibold tracking-[0.08em] uppercase text-slate-500 mb-2">
+                Room Name
+              </div>
+              <input
+                type="text"
+                placeholder="e.g. Friday Night Trivia"
+                value={roomName}
+                onChange={e => { setRoomName(e.target.value); setError(""); }}
+                onKeyDown={e => e.key === "Enter" && canSubmit && handleCreateRoom()}
+                maxLength={40}
+                className="w-full bg-[#0f1720] border-[1.5px] border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 text-[0.9375rem] outline-none placeholder:text-slate-700 transition-all duration-150 focus:border-indigo-500 focus:bg-indigo-500/[0.05] focus:ring-2 focus:ring-indigo-500/10"
+                style={{ fontFamily: "'DM Sans', sans-serif" }}
+              />
+            </div>
+
+            {/* quiz selector */}
+            <div>
+              <div className="text-[0.68rem] font-semibold tracking-[0.08em] uppercase text-slate-500 mb-2">
+                Quiz
+              </div>
+              <div className="relative">
+                <select
+                  value={quizId}
+                  onChange={e => setQuizId(e.target.value)}
+                  disabled={!quizzes.length}
+                  className="cr-select w-full bg-[#0f1720] border-[1.5px] border-slate-700/50 rounded-xl px-4 py-3 pr-10 text-slate-100 text-[0.9375rem] outline-none transition-all duration-150 focus:border-indigo-500 focus:bg-indigo-500/[0.05] focus:ring-2 focus:ring-indigo-500/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  style={{ fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  {!quizzes.length && <option value="">No quizzes available</option>}
+                  {quizzes.map(q => (
+                    <option key={q.id} value={q.id}>{q.title}</option>
+                  ))}
+                </select>
+                {/* custom chevron */}
+                <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+              </div>
+
+              {/* no quizzes empty state */}
+              {!quizzes.length && (
+                <div className="mt-3 bg-amber-500/[0.07] border border-amber-500/20 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+                  <p className="text-xs text-amber-400/80">You don't have any quizzes yet.</p>
+                  <button
+                    onClick={() => navigate("/quizzes/create")}
+                    className="text-xs font-semibold text-amber-400 whitespace-nowrap hover:text-amber-300 transition-colors"
+                  >
+                    Create one →
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* submit */}
+            <button
+              onClick={handleCreateRoom}
+              disabled={!canSubmit}
+              aria-busy={loading}
+              className={[
+                "cr-btn-shine w-full mt-1 py-3.5 rounded-2xl font-bold text-[0.9375rem] tracking-wide text-white",
+                "bg-gradient-to-br from-indigo-600 to-violet-600",
+                "shadow-[0_4px_20px_rgba(99,102,241,0.28),0_1px_3px_rgba(0,0,0,0.3)]",
+                "transition-all duration-200",
+                canSubmit
+                  ? "hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(99,102,241,0.4)] active:translate-y-0 cursor-pointer"
+                  : "opacity-40 cursor-not-allowed",
+              ].join(" ")}
+              style={{ fontFamily: "'Syne', sans-serif" }}
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Creating…
+                </span>
+              ) : (
+                "Create Room →"
+              )}
+            </button>
+          </div>
+
+          {/* footer hint */}
+          <div className="flex items-center gap-2.5 text-[0.7rem] tracking-wide text-slate-700 mt-6">
+            <span className="flex-1 h-px bg-slate-800" />
+            a QR code &amp; shareable link will be generated
+            <span className="flex-1 h-px bg-slate-800" />
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

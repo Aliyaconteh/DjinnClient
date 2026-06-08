@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useToast } from "../../../components/ui/ToastContext";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -16,6 +17,7 @@ export default function CreateQuiz() {
   const [questions, setQuestions] = useState([emptyQuestion()]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const { addToast } = useToast();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -41,11 +43,27 @@ export default function CreateQuiz() {
   const saveQuiz = async () => {
     setError("");
 
-    if (!title.trim()) return setError("Quiz title is required.");
+    if (!title.trim()) {
+      setError("Quiz title is required.");
+      addToast("Quiz title is required.", { type: "error" });
+      return;
+    }
     for (const item of questions) {
-      if (!item.question.trim()) return setError("Every question needs text.");
-      if (item.options.some((option) => !option.trim())) return setError("Every question needs four options.");
-      if (!item.correctAnswer.trim()) return setError("Select a correct answer for every question.");
+      if (!item.question.trim()) {
+        setError("Every question needs text.");
+        addToast("Every question needs text.", { type: "error" });
+        return;
+      }
+      if (item.options.some((option) => !option.trim())) {
+        setError("Every question needs four options.");
+        addToast("Every question needs four options.", { type: "error" });
+        return;
+      }
+      if (!item.correctAnswer.trim()) {
+        setError("Select a correct answer for every question.");
+        addToast("Select a correct answer for every question.", { type: "error" });
+        return;
+      }
     }
 
     setSaving(true);
@@ -77,6 +95,7 @@ export default function CreateQuiz() {
       navigate("/quizzes");
     } catch (err) {
       setError(err.message);
+      addToast(err.message, { type: "error" });
     } finally {
       setSaving(false);
     }

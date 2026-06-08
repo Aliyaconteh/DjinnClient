@@ -1,14 +1,22 @@
 import { useState } from "react";
 import { apiUrl } from "../../../config/api";
+import { useToast } from "../../../components/ui/ToastContext";
+import Skeleton from "../../../components/ui/Skeleton";
 
 export default function Leaderboard() {
   const [roomCode, setRoomCode] = useState("");
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { addToast } = useToast();
 
   const loadLeaderboard = async () => {
-    if (!roomCode.trim()) return setError("Enter a room code.");
+    if (!roomCode.trim()) {
+      const msg = "Enter a room code.";
+      setError(msg);
+      addToast(msg, { type: "error" });
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -18,6 +26,7 @@ export default function Leaderboard() {
       setPlayers(response.data || []);
     } catch (err) {
       setError(err.message);
+      addToast(err.message, { type: "error" });
       setPlayers([]);
     } finally {
       setLoading(false);
@@ -60,17 +69,19 @@ export default function Leaderboard() {
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
           <h2 className="text-2xl font-black mb-5">Players</h2>
           <div className="space-y-3">
-            {players.map((player, index) => (
-              <div
-                key={player.id || player.player_id}
-                className="flex items-center justify-between rounded-xl bg-slate-800 border border-slate-700 px-4 py-3"
-              >
-                <span className="font-semibold">{index + 1}. {player.username || player.player_id || "Player"}</span>
-                <span className="font-black text-emerald-400">{Number(player.score || 0)}</span>
-              </div>
-            ))}
-
-            {!players.length && (
+            {loading ? (
+              <Skeleton count={4} variant="row" size="sm" />
+            ) : players.length ? (
+              players.map((player, index) => (
+                <div
+                  key={player.id || player.player_id}
+                  className="flex items-center justify-between rounded-xl bg-slate-800 border border-slate-700 px-4 py-3"
+                >
+                  <span className="font-semibold">{index + 1}. {player.username || player.player_id || "Player"}</span>
+                  <span className="font-black text-emerald-400">{Number(player.score || 0)}</span>
+                </div>
+              ))
+            ) : (
               <p className="text-slate-400">Enter a room code to view scores.</p>
             )}
           </div>
