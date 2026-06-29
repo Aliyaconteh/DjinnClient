@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Trophy, Users, Star, ArrowLeft, Crown, Medal } from "lucide-react";
 import { useGame } from "../../../context/GameContext";
 import { apiUrl } from "../../../config/api";
 import { useToast } from "../../../components/ui/ToastContext";
+
+const rankStyles = [
+  { bg: "bg-amber-500/15", border: "border-amber-500/30", text: "text-amber-400", badge: "bg-amber-500/20", icon: Crown },
+  { bg: "bg-slate-400/15", border: "border-slate-400/30", text: "text-slate-300", badge: "bg-slate-400/20", icon: Medal },
+  { bg: "bg-orange-600/15", border: "border-orange-600/30", text: "text-orange-400", badge: "bg-orange-600/20", icon: Medal },
+];
 
 export default function Results() {
   const { roomCode } = useParams();
@@ -10,7 +17,13 @@ export default function Results() {
   const { leaderboard, setLeaderboard, resetGame } = useGame();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [mounted, setMounted] = useState(false);
   const { addToast } = useToast();
+
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 30);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (leaderboard?.length) return;
@@ -33,6 +46,7 @@ export default function Results() {
     [leaderboard]
   );
   const winner = sorted[0];
+  const totalScore = sorted.reduce((sum, p) => sum + Number(p.score || 0), 0);
 
   const handleBackToHome = () => {
     resetGame();
@@ -40,56 +54,139 @@ export default function Results() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white px-4 py-10">
-      <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-8">
-          <p className="text-slate-400 uppercase tracking-wide text-sm">Room {roomCode}</p>
-          <h1 className="text-4xl md:text-5xl font-black mt-2">Game Results</h1>
+    <div
+      className={`min-h-screen bg-[#060a0f] text-white px-4 py-10 relative overflow-hidden transition-opacity duration-700 ${mounted ? "opacity-100" : "opacity-0"}`}
+      
+    >
+      {/* Ambient blobs */}
+      <div className="absolute w-[520px] h-[520px] rounded-full bg-amber-500/6 blur-[90px] -top-32 -right-36 pointer-events-none" />
+      <div className="absolute w-[380px] h-[380px] rounded-full bg-indigo-500/6 blur-[80px] -bottom-20 -left-16 pointer-events-none" />
+
+      <div className="max-w-3xl mx-auto relative">
+        {/* Header */}
+        <div className="text-center mb-8" style={{ animation: "slideUp 0.5s ease both" }}>
+          <p className="text-slate-500 uppercase tracking-[0.12em] text-sm font-semibold">Room {roomCode}</p>
+          <h1
+            className="text-4xl md:text-5xl font-extrabold mt-2"
+            
+          >
+            Game{" "}
+            <span className="bg-gradient-to-br from-amber-400 to-orange-400 bg-clip-text text-transparent">
+              Results
+            </span>
+          </h1>
         </div>
 
-        {winner && (
-          <div className="bg-amber-500 text-slate-950 rounded-2xl p-6 mb-6 text-center">
-            <p className="text-sm font-bold uppercase tracking-wide">Winner</p>
-            <h2 className="text-3xl font-black mt-1">{winner.username || "Player"}</h2>
-            <p className="font-bold mt-1">{Number(winner.score || 0)} points</p>
+        {/* Stats summary */}
+        {sorted.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6" style={{ animation: "slideUp 0.5s ease both", animationDelay: "0.1s" }}>
+            <div className="bg-[#0d131c]/80 border border-slate-800 rounded-2xl p-4 text-center">
+              <Users size={16} className="text-indigo-400 mx-auto mb-1" />
+              <p className="text-2xl font-black text-white">{sorted.length}</p>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Players</p>
+            </div>
+            <div className="bg-[#0d131c]/80 border border-slate-800 rounded-2xl p-4 text-center">
+              <Star size={16} className="text-emerald-400 mx-auto mb-1" />
+              <p className="text-2xl font-black text-white">{Number(winner?.score || 0)}</p>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Top Score</p>
+            </div>
+            <div className="bg-[#0d131c]/80 border border-slate-800 rounded-2xl p-4 text-center">
+              <Trophy size={16} className="text-amber-400 mx-auto mb-1" />
+              <p className="text-2xl font-black text-white">{totalScore}</p>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Total Points</p>
+            </div>
           </div>
         )}
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        {/* Winner banner */}
+        {winner && (
+          <div
+            className="bg-gradient-to-br from-amber-500/15 to-orange-500/10 border border-amber-500/30 rounded-2xl p-6 mb-6 text-center relative overflow-hidden"
+            style={{ animation: "confettiBurst 0.5s cubic-bezier(0.34,1.56,0.64,1) both", animationDelay: "0.2s" }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent" />
+            <div className="relative">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center mx-auto mb-3">
+                <Crown size={24} className="text-amber-400" />
+              </div>
+              <p className="text-xs font-bold uppercase tracking-[0.15em] text-amber-400">Winner</p>
+              <h2
+                className="text-3xl font-extrabold mt-1 text-white"
+                
+              >
+                {winner.username || "Player"}
+              </h2>
+              <p className="font-bold mt-1 text-amber-300">{Number(winner.score || 0)} points</p>
+            </div>
+          </div>
+        )}
+
+        {/* Leaderboard */}
+        <div className="bg-[#0d131c]/80 border border-slate-800 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-2xl font-black">Final Leaderboard</h2>
-            {loading && <span className="text-sm text-slate-400">Loading...</span>}
+            <h2 className="text-2xl font-extrabold flex items-center gap-2">
+              <Trophy size={18} className="text-amber-400" />
+              Final Leaderboard
+            </h2>
+            {loading && <span className="text-sm text-slate-500">Loading...</span>}
           </div>
 
           {error && (
-            <div className="mb-4 rounded-xl border border-red-700 bg-red-950/50 px-4 py-3 text-red-100">
-              {error}
+            <div className="mb-4 flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 flex-shrink-0" />
+              <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
 
           <div className="space-y-3">
-            {sorted.map((player, index) => (
-              <div
-                key={player.id || player.player_id || player.playerId}
-                className="flex items-center justify-between rounded-xl bg-slate-800 border border-slate-700 px-4 py-3"
-              >
-                <span className="font-semibold">
-                  {index + 1}. {player.username || player.player_id || "Player"}
-                </span>
-                <span className="font-black text-emerald-400">{Number(player.score || 0)}</span>
-              </div>
-            ))}
+            {sorted.map((player, index) => {
+              const rank = rankStyles[index];
+              return (
+                <div
+                  key={player.id || player.player_id || player.playerId}
+                  className={`flex items-center justify-between rounded-xl px-4 py-3 border transition-all duration-300 ${
+                    rank
+                      ? `${rank.bg} ${rank.border}`
+                      : "bg-slate-800/40 border-slate-700/50"
+                  }`}
+                  style={{ animation: "staggerFade 0.4s ease both", animationDelay: `${0.3 + index * 0.06}s` }}
+                >
+                  <div className="flex items-center gap-3">
+                    {rank ? (
+                      <div className={`w-7 h-7 rounded-lg ${rank.badge} flex items-center justify-center`}>
+                        <rank.icon size={14} className={rank.text} />
+                      </div>
+                    ) : (
+                      <span className="w-7 h-7 rounded-lg bg-slate-800/60 flex items-center justify-center text-xs font-bold text-slate-500">
+                        {index + 1}
+                      </span>
+                    )}
+                    <span className="font-semibold text-slate-100">
+                      {player.username || player.player_id || "Player"}
+                    </span>
+                  </div>
+                  <span className={`font-black text-lg ${rank ? rank.text : "text-emerald-400"}`}>
+                    {Number(player.score || 0)}
+                  </span>
+                </div>
+              );
+            })}
 
             {!loading && !sorted.length && (
-              <p className="text-slate-400">No results have been recorded for this room yet.</p>
+              <div className="text-center py-8">
+                <p className="text-slate-500 font-medium">No results have been recorded for this room yet.</p>
+              </div>
             )}
           </div>
         </div>
 
+        {/* Back to Home */}
         <button
           onClick={handleBackToHome}
-          className="w-full mt-6 rounded-xl bg-blue-600 hover:bg-blue-700 py-3 font-bold"
+          className="btn-shimmer w-full mt-6 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 py-3.5 font-bold shadow-[0_4px_16px_rgba(99,102,241,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(99,102,241,0.35)] transition-all duration-200 flex items-center justify-center gap-2"
+          
         >
+          <ArrowLeft size={16} />
           Back to Home
         </button>
       </div>

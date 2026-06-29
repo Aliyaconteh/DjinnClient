@@ -39,7 +39,7 @@ function CopyButton({ text, label, variant = "secondary" }) {
   };
 
   return (
-    <button onClick={handleCopy} className={`${base} ${styles[variant]}`} style={{ fontFamily: "'DM Sans', sans-serif" }}>
+    <button onClick={handleCopy} className={`${base} ${styles[variant]}`} >
       {copied ? <Check size={15} className="text-emerald-400" /> : variant === "primary" ? <Copy size={15} /> : <Link2 size={15} />}
       {copied ? "Copied!" : label}
     </button>
@@ -79,7 +79,7 @@ export default function CreateRoom() {
   // auth guard
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      navigate(`/signIn?redirect=${encodeURIComponent(window.location.pathname)}`);
+      navigate(`/signin?redirect=${encodeURIComponent(window.location.pathname)}`);
     }
   }, [isAuthenticated, authLoading, navigate]);
 
@@ -174,7 +174,7 @@ export default function CreateRoom() {
     return (
       <>
         <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+          
           @keyframes cr-pop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
           @keyframes cr-shimmer { 0% { left:-60%; } 100% { left:160%; } }
           .cr-btn-shine { position: relative; overflow: hidden; }
@@ -184,7 +184,7 @@ export default function CreateRoom() {
             transform: skewX(-15deg); animation: cr-shimmer 2.8s infinite;
           }
         `}</style>
-        <div className="min-h-screen bg-[#060a0f] flex items-center justify-center p-6 relative overflow-hidden" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        <div className="min-h-screen bg-[#060a0f] flex items-center justify-center p-6 relative overflow-hidden" >
           <BackgroundGrid />
           {/* blobs */}
           <div className="absolute w-[500px] h-[500px] rounded-full bg-indigo-500/10 blur-[100px] -top-40 -right-32 pointer-events-none" />
@@ -205,8 +205,7 @@ export default function CreateRoom() {
               </span>
             </div>
 
-            <h1 className="text-[1.85rem] font-extrabold text-slate-100 mb-1 leading-tight"
-                style={{ fontFamily: "'Syne', sans-serif", letterSpacing: "-0.03em" }}>
+            <h1 className="text-[1.85rem] font-extrabold text-slate-100 mb-1 leading-tight">
               Share &amp;{" "}
               <em className="not-italic bg-gradient-to-br from-indigo-400 to-violet-400 bg-clip-text text-transparent">
                 Invite
@@ -217,8 +216,7 @@ export default function CreateRoom() {
             {/* room code display */}
             <div className="bg-[#0a0f1a] border border-indigo-500/20 rounded-2xl p-5 mb-4 text-center">
               <p className="text-[0.65rem] font-semibold tracking-[0.15em] uppercase text-slate-600 mb-2">Room Code</p>
-              <p className="text-5xl font-extrabold tracking-[0.18em] text-indigo-300"
-                 style={{ fontFamily: "'Syne', monospace" }}>
+              <p className="text-4xl sm:text-5xl font-extrabold tracking-[0.18em] text-indigo-300">
                 {createdRoomCode}
               </p>
             </div>
@@ -226,7 +224,7 @@ export default function CreateRoom() {
             {/* QR code */}
             <div className="flex justify-center mb-4">
               <div className="bg-white p-4 rounded-2xl shadow-[0_0_32px_rgba(99,102,241,0.15)]">
-                <QRCodeCanvas value={joinUrl} size={180} level="H" includeMargin={false} />
+                <QRCodeCanvas value={joinUrl} size={160} level="H" includeMargin={false} className="w-36 h-36 sm:w-[180px] sm:h-[180px]" />
               </div>
             </div>
 
@@ -244,7 +242,7 @@ export default function CreateRoom() {
             <button
               onClick={() => navigate(`/waiting-room/${createdRoomCode}`)}
               className="cr-btn-shine w-full py-3.5 rounded-2xl font-bold text-[0.9375rem] text-white bg-gradient-to-br from-emerald-600 to-emerald-500 shadow-[0_4px_20px_rgba(16,185,129,0.28)] hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(16,185,129,0.4)] active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2"
-              style={{ fontFamily: "'Syne', sans-serif" }}
+              
             >
               <LogIn size={16} />
               Enter Waiting Room
@@ -261,7 +259,7 @@ export default function CreateRoom() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+        
         @keyframes cr-shimmer { 0% { left:-60%; } 100% { left:160%; } }
         .cr-btn-shine { position: relative; overflow: hidden; }
         .cr-btn-shine::after {
@@ -275,7 +273,7 @@ export default function CreateRoom() {
 
       <div
         className={`min-h-screen bg-[#060a0f] flex items-center justify-center p-6 relative overflow-hidden transition-opacity duration-700 ${mounted ? "opacity-100" : "opacity-0"}`}
-        style={{ fontFamily: "'DM Sans', sans-serif" }}
+        
       >
         <BackgroundGrid />
         {/* blobs */}
@@ -305,7 +303,7 @@ export default function CreateRoom() {
           {/* heading */}
           <h1
             className="text-[2rem] font-extrabold text-slate-100 leading-tight mb-1.5"
-            style={{ fontFamily: "'Syne', sans-serif", letterSpacing: "-0.03em" }}
+            
           >
             Create a{" "}
             <em className="not-italic bg-gradient-to-br from-indigo-400 to-violet-400 bg-clip-text text-transparent">
@@ -336,7 +334,7 @@ export default function CreateRoom() {
                 onKeyDown={e => e.key === "Enter" && canSubmit && handleCreateRoom()}
                 maxLength={40}
                 className="w-full bg-[#0f1720] border-[1.5px] border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 text-[0.9375rem] outline-none placeholder:text-slate-700 transition-all duration-150 focus:border-indigo-500 focus:bg-indigo-500/[0.05] focus:ring-2 focus:ring-indigo-500/10"
-                style={{ fontFamily: "'DM Sans', sans-serif" }}
+                
               />
             </div>
 
@@ -351,7 +349,7 @@ export default function CreateRoom() {
                   onChange={e => setQuizId(e.target.value)}
                   disabled={!quizzes.length}
                   className="cr-select w-full bg-[#0f1720] border-[1.5px] border-slate-700/50 rounded-xl px-4 py-3 pr-10 text-slate-100 text-[0.9375rem] outline-none transition-all duration-150 focus:border-indigo-500 focus:bg-indigo-500/[0.05] focus:ring-2 focus:ring-indigo-500/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                  style={{ fontFamily: "'DM Sans', sans-serif" }}
+                  
                 >
                   {!quizzes.length && <option value="">No quizzes available</option>}
                   {quizzes.map(q => (
@@ -390,7 +388,7 @@ export default function CreateRoom() {
                   ? "hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(99,102,241,0.4)] active:translate-y-0 cursor-pointer"
                   : "opacity-40 cursor-not-allowed",
               ].join(" ")}
-              style={{ fontFamily: "'Syne', sans-serif" }}
+              
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
