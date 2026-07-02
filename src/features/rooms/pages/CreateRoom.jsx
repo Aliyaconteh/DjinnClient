@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 import { Check, ChevronDown, Copy, Link2, LogIn, PlusCircle, Wifi, WifiOff } from "lucide-react";
@@ -43,6 +43,65 @@ function CopyButton({ text, label, variant = "secondary" }) {
       {copied ? <Check size={15} className="text-emerald-400" /> : variant === "primary" ? <Copy size={15} /> : <Link2 size={15} />}
       {copied ? "Copied!" : label}
     </button>
+  );
+}
+
+// ── Custom dark-themed quiz dropdown ──────────────────────────────────────────
+function QuizSelect({ quizzes, value, onChange, disabled }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const selected = quizzes.find(q => q.id === value);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => !disabled && setOpen((v) => !v)}
+        disabled={disabled}
+        className={`w-full bg-[#0f1720] border-[1.5px] rounded-xl px-4 py-3 outline-none transition-all duration-150 cursor-pointer flex items-center justify-between disabled:opacity-40 disabled:cursor-not-allowed ${
+          open ? "border-indigo-500 bg-indigo-500/[0.05] ring-2 ring-indigo-500/10" : "border-slate-700/50"
+        }`}
+      >
+        <span className={selected ? "text-slate-100 truncate pr-2" : "text-slate-600 truncate pr-2"}>
+          {selected ? selected.title : "Select a quiz"}
+        </span>
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-slate-500 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && quizzes.length > 0 && (
+        <div className="absolute z-30 left-0 right-0 mt-1.5 bg-[#0f1720] border border-slate-700/60 rounded-xl shadow-xl shadow-black/50 overflow-hidden max-h-60 overflow-y-auto animate-fade-in">
+          {quizzes.map((q) => (
+            <button
+              key={q.id}
+              type="button"
+              onClick={() => {
+                onChange(q.id);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-4 py-2.5 text-sm transition-colors duration-100 ${
+                value === q.id
+                  ? "bg-indigo-500/15 text-indigo-300 font-semibold"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`}
+            >
+              {q.title}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -343,22 +402,12 @@ export default function CreateRoom() {
               <div className="text-[0.68rem] font-semibold tracking-[0.08em] uppercase text-slate-500 mb-2">
                 Quiz
               </div>
-              <div className="relative">
-                <select
-                  value={quizId}
-                  onChange={e => setQuizId(e.target.value)}
-                  disabled={!quizzes.length}
-                  className="cr-select w-full bg-[#0f1720] border-[1.5px] border-slate-700/50 rounded-xl px-4 py-3 pr-10 text-slate-100 text-[0.9375rem] outline-none transition-all duration-150 focus:border-indigo-500 focus:bg-indigo-500/[0.05] focus:ring-2 focus:ring-indigo-500/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                  
-                >
-                  {!quizzes.length && <option value="">No quizzes available</option>}
-                  {quizzes.map(q => (
-                    <option key={q.id} value={q.id}>{q.title}</option>
-                  ))}
-                </select>
-                {/* custom chevron */}
-                <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-              </div>
+              <QuizSelect
+                quizzes={quizzes}
+                value={quizId}
+                onChange={setQuizId}
+                disabled={!quizzes.length}
+              />
 
               {/* no quizzes empty state */}
               {!quizzes.length && (

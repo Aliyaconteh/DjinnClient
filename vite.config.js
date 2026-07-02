@@ -5,7 +5,4 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
   ],
-  server: {
-    allowedHosts: ['postnasal-onboard-chili.ngrok-free.dev'],
-  },
 })

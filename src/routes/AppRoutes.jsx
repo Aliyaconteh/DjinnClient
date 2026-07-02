@@ -4,6 +4,7 @@ import Home from "../pages/Home";
 import MainLayout from "../layouts/MainLayout";
 import SignIn from "../features/auth/pages/SignIn";
 import SignUp from "../features/auth/pages/SignUp";
+import Profile from "../features/auth/pages/Profile";
 import RequireAuth from "../features/auth/RequireAuth";
 import CreateRoom from "../features/rooms/pages/CreateRoom";
 import JoinRoom from "../features/rooms/pages/JoinRoom";
@@ -60,6 +61,7 @@ export default function AppRoutes() {
 
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
 
         <Route path="/quizzes" element={<RequireAuth><QuizList /></RequireAuth>} />
 

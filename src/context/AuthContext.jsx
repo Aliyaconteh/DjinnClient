@@ -4,6 +4,21 @@ import { apiUrl } from "../config/api";
 
 const AuthContext = createContext();
 const STORAGE_KEY = "quizroom_host_auth";
+const THEME_STORAGE_KEY = "quizroom_host_theme";
+
+const getStoredTheme = () => {
+  if (typeof window === "undefined") return "dark";
+  return localStorage.getItem(THEME_STORAGE_KEY) || "dark";
+};
+
+const applyTheme = (theme) => {
+  if (typeof document === "undefined") return;
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.classList.toggle("light", theme === "light");
+  document.documentElement.classList.toggle("dark", theme === "dark");
+  document.documentElement.style.colorScheme = theme;
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -11,6 +26,7 @@ export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [theme, setThemeState] = useState(getStoredTheme);
 
   useEffect(() => {
     try {
@@ -29,6 +45,10 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
 
   const persistAuth = useCallback((userData, authToken) => {
     setUser(userData);
@@ -68,16 +88,63 @@ export function AuthProvider({ children }) {
     [token]
   );
 
+  const updateProfile = useCallback(
+    async (username) => {
+      const response = await authFetch("/auth/profile", {
+        method: "PUT",
+        body: JSON.stringify({ username })
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || "Unable to update profile");
+      }
+
+      const updatedUser = { ...(user || {}), ...payload.data.user };
+      setUser(updatedUser);
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") || {};
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...stored, user: updatedUser, token }));
+      return updatedUser;
+    },
+    [authFetch, token, user]
+  );
+
+  const changePassword = useCallback(
+    async (currentPassword, newPassword) => {
+      const response = await authFetch("/auth/password", {
+        method: "PUT",
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || "Unable to change password");
+      }
+
+      return payload.data;
+    },
+    [authFetch]
+  );
+
+  const setTheme = useCallback((nextTheme) => {
+    setThemeState(nextTheme);
+    applyTheme(nextTheme);
+  }, []);
+
   const value = {
     user,
     token,
     isAuthenticated,
     loading,
     error,
+    theme,
+    setTheme,
     setError,
     login,
     logout,
-    authFetch
+    authFetch,
+    updateProfile,
+    changePassword
   };
 
   return (

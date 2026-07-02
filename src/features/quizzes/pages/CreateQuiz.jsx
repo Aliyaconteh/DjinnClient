@@ -1,8 +1,65 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PlusCircle, Trash2, Save, Clock, ChevronDown } from "lucide-react";
 import { useToast } from "../../../components/ui/ToastContext";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+
+// ── Custom dark-themed dropdown for correct answer selection ──────────────────
+function CorrectAnswerSelect({ options, value, onChange, hasError }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = options.filter(Boolean);
+  const baseClass = `w-full bg-[#0f1720] border-[1.5px] rounded-xl px-4 py-3 outline-none transition-all duration-150 cursor-pointer flex items-center justify-between ${hasError ? "border-red-500/70" : "border-slate-700/50"} ${open ? "border-indigo-500 bg-indigo-500/[0.05] ring-2 ring-indigo-500/10" : ""}`;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={baseClass}
+      >
+        <span className={value ? "text-slate-100 truncate pr-2" : "text-slate-600 truncate pr-2"}>
+          {value || "Correct answer"}
+        </span>
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-slate-500 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && filtered.length > 0 && (
+        <div className="absolute z-30 left-0 right-0 mt-1.5 bg-[#0f1720] border border-slate-700/60 rounded-xl shadow-xl shadow-black/50 overflow-hidden animate-fade-in">
+          {filtered.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => {
+                onChange(option);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-4 py-2.5 text-sm transition-colors duration-100 ${
+                value === option
+                  ? "bg-indigo-500/15 text-indigo-300 font-semibold"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const emptyQuestion = () => ({
   question: "",
@@ -232,20 +289,16 @@ export default function CreateQuiz() {
               </div>
 
               <div className="grid sm:grid-cols-2 gap-3">
-                <div className="relative">
-                  <select
+                <div>
+                  <CorrectAnswerSelect
+                    options={item.options}
                     value={item.correctAnswer}
-                    onChange={(event) => updateQuestion(index, { correctAnswer: event.target.value })}
-                    onBlur={() => markTouched(`q${index}_correct`)}
-                    className={`${inputClass(touched[`q${index}_correct`] && !item.correctAnswer.trim())} appearance-none pr-10 cursor-pointer`}
-                    
-                  >
-                    <option value="">Correct answer</option>
-                    {item.options.filter(Boolean).map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                    onChange={(val) => {
+                      updateQuestion(index, { correctAnswer: val });
+                      markTouched(`q${index}_correct`);
+                    }}
+                    hasError={touched[`q${index}_correct`] && !item.correctAnswer.trim()}
+                  />
                 </div>
                 <div className="relative">
                   <Clock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />

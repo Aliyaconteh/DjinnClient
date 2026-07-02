@@ -2,10 +2,10 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "./ToastContext";
-import { ChevronDown, LogOut, Plus, ListPlus } from "lucide-react";
+import { ChevronDown, LogOut, Plus, ListPlus, Activity, UserCircle, Palette } from "lucide-react";
 
 export default function UserMenu() {
-  const { user, logout } = useAuth();
+  const { user, logout, theme, setTheme } = useAuth();
   const { addToast } = useToast();
   const [open, setOpen] = useState(false);
   const ref = useRef();
@@ -61,7 +61,30 @@ export default function UserMenu() {
           </div>
 
           {/* Actions */}
-          <div className="p-1.5 space-y-0.5">
+          <div className="p-1.5 space-y-0.5 max-h-80 overflow-y-auto">
+            <button
+              onClick={() => { navigate("/profile"); setOpen(false); }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-150 text-sm"
+            >
+              <UserCircle size={15} />
+              <span>Profile</span>
+            </button>
+
+            <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-sm text-slate-300">
+              <div className="flex items-center gap-3">
+                <Palette size={15} />
+                <span>Theme</span>
+              </div>
+              <select
+                value={theme}
+                onChange={(event) => setTheme(event.target.value)}
+                className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 outline-none"
+              >
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+              </select>
+            </div>
+
             <button
               onClick={() => { navigate("/quizzes/create"); setOpen(false); }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-150 text-sm"
@@ -77,7 +100,14 @@ export default function UserMenu() {
               <Plus size={15} />
               <span>Create Room</span>
             </button>
-           
+
+            <button
+              onClick={() => { navigate("/sync-analysis"); setOpen(false); }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-150 text-sm"
+            >
+              <Activity size={15} />
+              <span>Analysis</span>
+            </button>
 
             <div className="border-t border-slate-700/50 my-1" />
 

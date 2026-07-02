@@ -42,15 +42,14 @@ export default function Navbar() {
             </span>
           </NavLink>
 
-          {/* ── Mobile nav: icon-only links inline ─────────────────────── */}
+          {/* ── Mobile nav: icon + label stacked ──────────────────────── */}
           <div className="flex lg:hidden items-center gap-0.5 flex-1 justify-center">
             {links.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}
-                title={label}
                 className={({ isActive }) =>
-                  `flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 ${
+                  `flex flex-col items-center justify-center rounded-lg px-1.5 py-1 transition-all duration-150 min-w-[48px] ${
                     isActive
                       ? "bg-indigo-500/20 text-indigo-300"
                       : "text-slate-400 hover:text-white hover:bg-slate-800/70"
@@ -58,10 +57,9 @@ export default function Navbar() {
                 }
               >
                 <Icon size={18} aria-hidden="true" />
-                <span className="sr-only">{label}</span>
+                <span className="text-[9px] font-semibold mt-0.5 leading-tight">{label}</span>
               </NavLink>
             ))}
-  
           </div>
 
           {/* ── Desktop nav links ───────────────────────────────────────── */}

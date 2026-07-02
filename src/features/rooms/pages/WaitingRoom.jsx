@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Crown, Play, Wifi } from "lucide-react";
 import { socket } from "../../../services/socket/socket";
 import { useRoom } from "../../../context/RoomContext";
 import { apiUrl } from "../../../config/api";
 import { useToast } from "../../../components/ui/ToastContext";
+import { useAuth } from "../../../context/AuthContext";
 
 const avatarGradients = [
   "from-blue-500 to-indigo-600",
@@ -23,9 +24,9 @@ export default function WaitingRoom() {
   const { roomCode } = useParams();
   const navigate = useNavigate();
   const { room, setRoom } = useRoom();
-  const initialHostRef = useRef(room?.isHost || false);
 
   const { addToast } = useToast();
+  const { authFetch } = useAuth();
 
   const [loading, setLoading] = useState(!room || !room.players);
   const [error, setError] = useState("");
@@ -47,16 +48,15 @@ export default function WaitingRoom() {
         if (response.success) {
           const roomData = response.data.room;
           const dbPlayers = response.data.players || [];
+          const currentUserId = localStorage.getItem("playerId");
+
           const mappedPlayers = dbPlayers.map((p) => ({
             id: p.id,
             userId: p.user_id,
             username: p.username,
-            isHost: p.user_id === roomData.host_id || p.username === roomData.host_id,
+            isHost: p.user_id === roomData.host_id,
             score: p.score || 0
           }));
-
-          const currentUsername = localStorage.getItem("username");
-          const isHost = initialHostRef.current || roomData.host_id === currentUsername;
 
           setRoom({
             id: roomData.id,
@@ -67,7 +67,8 @@ export default function WaitingRoom() {
             delayLevel: roomData.delay_level,
             delayMs: roomData.delay_ms,
             players: mappedPlayers,
-            isHost: isHost
+            hostId: roomData.host_id,
+            isHost: currentUserId === roomData.host_id
           });
         }
         setLoading(false);
@@ -79,11 +80,21 @@ export default function WaitingRoom() {
       });
 
     const handleRoomUpdate = (updatedRoom) => {
-      setRoom((prev) => ({
-        ...prev,
-        ...updatedRoom,
-        isHost: prev?.isHost || updatedRoom.players.find(p => p.username === localStorage.getItem("username"))?.isHost
-      }));
+      const currentUserId = localStorage.getItem("playerId");
+      const hostId = updatedRoom.hostId || updatedRoom.host_id;
+      setRoom((prev) => {
+        const resolvedHostId = hostId || prev?.hostId;
+        const currentPlayer = updatedRoom.players?.find(p => p.username === localStorage.getItem("username"));
+        const isHost = resolvedHostId
+          ? currentUserId === resolvedHostId
+          : currentPlayer?.isHost || false;
+        return {
+          ...prev,
+          ...updatedRoom,
+          hostId: resolvedHostId,
+          isHost
+        };
+      });
     };
 
     const handleRoomStarted = () => {
@@ -113,7 +124,7 @@ export default function WaitingRoom() {
   const handleStartQuiz = async () => {
     setStarting(true);
     try {
-      const res = await fetch(apiUrl("/api/rooms/start"), {
+      const res = await authFetch("/api/rooms/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roomCode })
