@@ -86,11 +86,11 @@ function QRScanner({ onScan, onClose }) {
     return raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
   };
 
-  const tick = useCallback(() => {
+  const tick = useCallback(function scanFrame() {
     const video  = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
-      rafRef.current = requestAnimationFrame(tick);
+      rafRef.current = requestAnimationFrame(scanFrame);
       return;
     }
     canvas.height = video.videoHeight;
@@ -108,7 +108,7 @@ function QRScanner({ onScan, onClose }) {
         return; // stop scanning
       }
     }
-    rafRef.current = requestAnimationFrame(tick);
+    rafRef.current = requestAnimationFrame(scanFrame);
   }, [onScan]);
 
   useEffect(() => {
@@ -384,7 +384,7 @@ export default function JoinRoom() {
               onClick={handleJoinRoom}
               disabled={!canSubmit}
               aria-busy={loading}
-              className={`btn-shimmer relative w-full mt-1 py-3.5 rounded-2xl overflow-hidden text-white font-bold text-[0.9375rem] tracking-wide bg-gradient-to-br from-emerald-600 to-emerald-500 shadow-[0_4px_20px_rgba(16,185,129,0.28),0_1px_3px_rgba(0,0,0,0.3)] transition-all duration-200 ${canSubmit ? "hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(16,185,129,0.4)] active:translate-y-0 cursor-pointer" : "opacity-40 cursor-not-allowed"}`}
+              className={`btn-shimmer relative w-full mt-1 py-3.5 rounded-2xl overflow-hidden text-white font-bold text-[0.9375rem] tracking-wide bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_20px_rgba(16,185,129,0.28),0_1px_3px_rgba(0,0,0,0.3)] transition-all duration-200 ${canSubmit ? "hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(16,185,129,0.4)] active:translate-y-0 cursor-pointer" : "opacity-40 cursor-not-allowed"}`}
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">

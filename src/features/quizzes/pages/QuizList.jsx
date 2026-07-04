@@ -89,14 +89,7 @@ export default function QuizList() {
               </span>
             </h1>
           </div>
-          <button
-            onClick={() => navigate("/quizzes/create")}
-            className="btn-shimmer rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 px-6 py-3 font-bold shadow-[0_4px_16px_rgba(99,102,241,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(99,102,241,0.35)] transition-all duration-200 flex items-center gap-2"
-            
-          >
-            <PlusCircle size={16} />
-            Create Quiz
-          </button>
+         
         </div>
 
         {error && (
