@@ -63,10 +63,10 @@ export default function QuizList() {
   const cancelDelete = () => setConfirmDeleteQuiz(null);
 
   return (
-    <div
-      className={`min-h-screen bg-[#060a0f] text-white px-4 py-10 relative overflow-hidden transition-opacity duration-700 ${mounted ? "opacity-100" : "opacity-0"}`}
-      
-    >
+    <>
+      <div
+        className={`min-h-screen bg-[#060a0f] text-white px-4 py-10 relative overflow-hidden transition-opacity duration-700 ${mounted ? "opacity-100" : "opacity-0"}`}
+      >
       {/* Ambient blobs */}
       <div className="absolute w-[520px] h-[520px] rounded-full bg-indigo-500/8 blur-[90px] -top-32 -right-36 pointer-events-none" />
       <div className="absolute w-[380px] h-[380px] rounded-full bg-violet-500/8 blur-[80px] -bottom-20 -left-16 pointer-events-none" />
@@ -145,7 +145,7 @@ export default function QuizList() {
               </div>
               <button
                 onClick={() => navigate(`/create-room?quizId=${encodeURIComponent(quiz.id)}`)}
-                className="mt-5 w-full rounded-xl bg-emerald-600/90 hover:bg-emerald-600 px-4 py-2.5 font-bold text-sm transition-all duration-200 hover:-translate-y-0.5"
+                className="mt-5 w-full rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 px-4 py-2.5 font-bold text-sm transition-all duration-200 hover:-translate-y-0.5"
               >
                 Use for Room
               </button>
@@ -220,15 +220,16 @@ export default function QuizList() {
         </div>
       )}
 
+      </div>
       {/* Floating Action Button — Create Quiz */}
       <button
         onClick={() => navigate("/quizzes/create")}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-[0_4px_20px_rgba(99,102,241,0.4)] hover:shadow-[0_8px_32px_rgba(99,102,241,0.5)] hover:-translate-y-1 active:translate-y-0 transition-all duration-200 flex items-center justify-center"
+        className="fixed bottom-20 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-[0_4px_20px_rgba(99,102,241,0.4)] hover:shadow-[0_8px_32px_rgba(99,102,241,0.5)] hover:-translate-y-1 active:translate-y-0 transition-all duration-200 flex items-center justify-center"
         title="Create Quiz"
         aria-label="Create new quiz"
       >
         <Plus size={24} />
       </button>
-    </div>
+    </>
   );
 }
