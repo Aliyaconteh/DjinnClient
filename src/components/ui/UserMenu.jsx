@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "./ToastContext";
-import { ChevronDown, LogOut, Plus, ListPlus, Activity, UserCircle, } from "lucide-react";
+import { ChevronDown, LogOut, Plus, Activity, UserCircle, } from "lucide-react";
 
 export default function UserMenu() {
   const { user, logout } = useAuth();
@@ -71,13 +71,6 @@ export default function UserMenu() {
               <span>Profile</span>
             </button>
 
-            <button
-              onClick={() => { navigate("/quizzes/create"); setOpen(false); }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-150 text-sm"
-            >
-              <ListPlus size={15} />
-              <span>Create Quiz</span>
-            </button>
 
             <button
               onClick={() => { navigate("/create-room"); setOpen(false); }}

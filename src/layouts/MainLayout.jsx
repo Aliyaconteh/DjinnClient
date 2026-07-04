@@ -17,7 +17,7 @@ export default function MainLayout({ children }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--app-surface)] text-[var(--app-text)] transition-colors duration-300">
+    <div className="min-h-screen bg-[var(--app-surface)] text-[var(--app-text)] transition-colors duration-300 pb-24 lg:pb-0">
       {/* Offline banner */}
       {isOffline && (
         <div className="bg-red-600 text-white text-center px-4 py-2 text-sm font-semibold flex items-center justify-center gap-2 z-50 relative">
