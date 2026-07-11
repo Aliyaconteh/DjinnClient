@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo, useCallback } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   BarChart3,
   CheckCircle2,
@@ -8,42 +9,45 @@ import {
   PlusCircle,
   Radio,
   ShieldCheck,
+  Sparkles,
   Trophy,
   Users,
-  ArrowRight
+  ArrowRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import heroImage from "../components/assets/hero.png";
 
+// -------------------------------------------------------------------
+//  Data
+// -------------------------------------------------------------------
 const workflows = [
   {
     title: "Create a quiz",
     text: "Add questions, options, correct answers, and timers before opening a room.",
     path: "/quizzes/create",
     icon: ListChecks,
-    action: "Build quiz"
+    action: "Build quiz",
   },
   {
     title: "Host a live room",
     text: "Select a quiz, generate a room code, and wait for participants in the lobby.",
     path: "/create-room",
     icon: PlusCircle,
-    action: "Create room"
+    action: "Create room",
   },
   {
     title: "Join with a code",
     text: "Participants can enter a room code and username to join the waiting room.",
     path: "/join-room",
     icon: Users,
-    action: "Join room"
+    action: "Join room",
   },
   {
     title: "Review outcomes",
     text: "Open room scores and synchronization analysis for evaluation and reporting.",
     path: "/leaderboard",
     icon: Trophy,
-    action: "View scores"
-  }
+    action: "View scores",
+  },
 ];
 
 const features = [
@@ -52,11 +56,88 @@ const features = [
   { icon: Clock3, title: "Optimistic feedback", text: "Client-side prediction is supported for comparing perceived responsiveness." },
   { icon: Database, title: "Persistent records", text: "Quizzes, rooms, players, answers, and session results are saved in Supabase." },
   { icon: BarChart3, title: "Analysis ready", text: "Synchronization logs support latency and reconciliation discussion." },
-  { icon: CheckCircle2, title: "Demo workflow", text: "Create quiz, create room, join, play, finish, and review results from one interface." }
+  { icon: CheckCircle2, title: "Demo workflow", text: "Create quiz, create room, join, play, finish, and review results from one interface." },
 ];
 
+// -------------------------------------------------------------------
+//  Animation variants (respects prefers-reduced-motion)
+// -------------------------------------------------------------------
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+};
+
+const staggerContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
+};
+
+// -------------------------------------------------------------------
+//  Reusable motion wrappers (keeps markup clean)
+// -------------------------------------------------------------------
+const MotionButton = motion.button;
+const MotionDiv = motion.div;
+const MotionSection = motion.section;
+
+// -------------------------------------------------------------------
+//  Card components – memoised for perf
+// -------------------------------------------------------------------
+const WorkflowCard = memo(function WorkflowCard({
+  title,
+  text,
+  icon: Icon,
+  action,
+  onOpen,
+}) {
+  return (
+    <MotionButton
+      onClick={onOpen}
+      variants={fadeUp}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className="group flex h-full flex-col rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-left backdrop-blur-sm transition-colors duration-200 hover:border-indigo-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70"
+      aria-label={`${action}: ${title}`}
+    >
+      <div className="mb-5 grid h-11 w-11 place-items-center rounded-xl bg-slate-800 text-indigo-300 transition-all duration-300 group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-purple-600 group-hover:text-white group-hover:shadow-lg group-hover:shadow-purple-500/20">
+        <Icon size={20} aria-hidden="true" />
+      </div>
+      <h3 className="text-xl font-extrabold tracking-tight">{title}</h3>
+      <p className="mt-3 flex-1 text-sm leading-6 text-slate-400">{text}</p>
+      <span className="mt-5 inline-flex items-center gap-1 text-sm font-bold text-indigo-300 transition-colors group-hover:text-indigo-200">
+        {action}
+        <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+      </span>
+    </MotionButton>
+  );
+});
+
+const FeatureCard = memo(function FeatureCard({
+  icon: Icon,
+  title,
+  text,
+}) {
+  return (
+    <MotionDiv
+      variants={fadeUp}
+      className="rounded-2xl border border-slate-800 bg-slate-900/40 p-5 backdrop-blur-sm transition-colors duration-200 hover:border-indigo-500/40"
+    >
+      <div className="mb-4 flex items-center gap-3">
+        <div className="grid h-10 w-10 place-items-center rounded-xl border border-slate-800 bg-slate-900 text-indigo-300 transition-colors group-hover:border-indigo-500/40">
+          <Icon size={20} aria-hidden="true" />
+        </div>
+        <h3 className="font-extrabold">{title}</h3>
+      </div>
+      <p className="text-sm leading-6 text-slate-400">{text}</p>
+    </MotionDiv>
+  );
+});
+
+// -------------------------------------------------------------------
+//  Home page
+// -------------------------------------------------------------------
 export default function Home() {
   const navigate = useNavigate();
+  const prefersReducedMotion = useReducedMotion();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -64,169 +145,145 @@ export default function Home() {
     return () => clearTimeout(t);
   }, []);
 
+  const handleNavigation = useCallback(
+    (path) => () => navigate(path),
+    [navigate]
+  );
+
+  // Respect user motion preference – skip initial mount fade if reduced motion
+  const heroOpacity = mounted ? "opacity-100" : "opacity-0";
+  const heroTransition = prefersReducedMotion
+    ? "transition-none"
+    : "transition-opacity duration-500";
+
   return (
-    <main className="bg-[#060a0f] text-white relative overflow-hidden">
-      {/* Ambient blobs */}
-      <div className="absolute w-[600px] h-[600px] rounded-full bg-indigo-500/5 blur-[120px] -top-40 -right-40 pointer-events-none" />
-      <div className="absolute w-[400px] h-[400px] rounded-full bg-violet-500/5 blur-[100px] top-1/2 -left-40 pointer-events-none" />
+    <main className="relative overflow-hidden bg-slate-950 text-white">
+      {/* Subtle animated gradient background – decorative */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      >
+        <div className="absolute -top-40 left-1/2 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-gradient-to-br from-indigo-900/20 to-purple-900/10 blur-3xl" />
+      </div>
 
       {/* HERO */}
-      <section className="border-b border-slate-800 relative">
-        <div className="mx-auto grid min-h-[calc(100vh-68px)] max-w-7xl items-center gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:py-14">
-          <div
-            className={`transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
-          >
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-200">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              Welcome to Djinn
-            </div>
-
-            <h1
-              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight"
-            >
-              Multiplayer Quiz{" "}
-              <span className="bg-gradient-to-br from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
-                Platform
-              </span>
-            </h1>
-
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-400">
-              A multiplayer quiz platform for creating quizzes, hosting live rooms,
-              joining with room codes, tracking scores, and comparing synchronization
-              strategies in a distributed web application.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <button
-                onClick={() => navigate("/quizzes/create")}
-                className="btn-shimmer rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 px-6 py-3 font-bold text-slate-950 shadow-[0_4px_16px_rgba(16,185,129,0.3)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(16,185,129,0.4)]"
-              >
-                Create Quiz
-              </button>
-              <button
-                onClick={() => navigate("/create-room")}
-                className="btn-shimmer rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-500 px-6 py-3 font-bold text-white shadow-[0_4px_16px_rgba(59,130,246,0.3)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(59,130,246,0.4)]"
-              >
-                Host Room
-              </button>
-              <button
-                onClick={() => navigate("/join-room")}
-                className="rounded-2xl border border-slate-700 bg-slate-900/80 px-6 py-3 font-bold text-white transition-all duration-200 hover:border-indigo-500/60 hover:-translate-y-0.5"
-              >
-                Join Room
-              </button>
-            </div>
-
-           
+      <section className="border-b border-slate-800/80">
+        <div
+          className={`mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 lg:py-28 ${heroOpacity} ${heroTransition}`}
+        >
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/90 px-4 py-2 text-sm font-semibold text-slate-200 backdrop-blur-sm">
+            <Sparkles size={16} className="text-indigo-300" aria-hidden="true" />
+            Welcome to Djinn
           </div>
 
-          <div
-            className={`relative transition-all duration-700 delay-200 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
-          >
-            <img
-              src={heroImage}
-              alt="Djinn live quiz dashboard preview"
-              className="aspect-[4/3] w-full rounded-2xl border border-slate-800 object-cover shadow-2xl shadow-black/40"
-            />
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <MiniPanel label="Active players" value="Live lobby" />
-              <MiniPanel label="Scoring" value="Instant updates" />
-            </div>
+          <h1 className="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
+            Multiplayer Quiz{" "}
+            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Platform
+            </span>
+          </h1>
+
+          <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-slate-400">
+            Create quizzes, host live rooms, join with a room code, and track
+            scores in real time.
+          </p>
+
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <MotionButton
+              onClick={handleNavigation("/quizzes/create")}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 px-6 py-3 font-bold text-white shadow-md shadow-purple-500/20 transition-shadow duration-200 hover:shadow-lg hover:shadow-purple-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70"
+              aria-label="Create a new quiz"
+            >
+              Create Quiz
+            </MotionButton>
+            <MotionButton
+              onClick={handleNavigation("/create-room")}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+              className="rounded-full border border-slate-700 bg-slate-900/90 px-6 py-3 font-bold text-slate-200 backdrop-blur-sm transition-colors duration-200 hover:border-indigo-500/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70"
+              aria-label="Host a new live room"
+            >
+              Host Room
+            </MotionButton>
+            <MotionButton
+              onClick={handleNavigation("/join-room")}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+              className="rounded-full border border-slate-700 bg-slate-900/90 px-6 py-3 font-bold text-slate-200 backdrop-blur-sm transition-colors duration-200 hover:border-indigo-500/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70"
+              aria-label="Join a room using a code"
+            >
+              Join Room
+            </MotionButton>
           </div>
         </div>
       </section>
 
       {/* WORKFLOWS */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 relative">
-        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <MotionSection
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-80px" }}
+        variants={prefersReducedMotion ? {} : staggerContainer}
+        className="mx-auto max-w-7xl px-4 py-16 sm:px-6"
+      >
+        <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-amber-300">Main workflows</p>
-            <h2
-              className="mt-2 text-3xl font-extrabold text-white"
-            >
+            <p className="text-sm font-bold uppercase tracking-wide text-indigo-300">
+              Main workflows
+            </p>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight">
               Move through the project
             </h2>
           </div>
-          <button
-            onClick={() => navigate("/sync-analysis")}
-            className="w-fit rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-2 font-bold text-slate-200 transition-all duration-200 hover:border-emerald-400 hover:-translate-y-0.5"
+          <MotionButton
+            onClick={handleNavigation("/sync-analysis")}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-fit rounded-full border border-slate-700 bg-slate-900/90 px-4 py-2 font-bold text-slate-200 backdrop-blur-sm transition-colors duration-200 hover:border-indigo-500/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70"
+            aria-label="Open synchronization analysis dashboard"
           >
             Open Analysis
-          </button>
+          </MotionButton>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {workflows.map((item, i) => (
-            <WorkflowCard key={item.title} {...item} index={i} onOpen={() => navigate(item.path)} />
+          {workflows.map((item) => (
+            <WorkflowCard
+              key={item.title}
+              {...item}
+              onOpen={handleNavigation(item.path)}
+            />
           ))}
         </div>
-      </section>
+      </MotionSection>
 
       {/* FEATURES */}
-      <section className="border-t border-slate-800 bg-slate-900/30">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-          <div className="mb-7">
-            <p className="text-sm font-bold uppercase tracking-wide text-sky-300">System design</p>
-            <h2
-              className="mt-2 text-3xl font-extrabold text-white"
-            >
+      <MotionSection
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-80px" }}
+        variants={prefersReducedMotion ? {} : staggerContainer}
+        className="border-t border-slate-800/80 bg-slate-900/30"
+      >
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+          <div className="mb-8">
+            <p className="text-sm font-bold uppercase tracking-wide text-indigo-300">
+              System design
+            </p>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight">
               What the project demonstrates
             </h2>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature, i) => (
-              <FeatureCard key={feature.title} {...feature} index={i} />
+            {features.map((feature) => (
+              <FeatureCard key={feature.title} {...feature} />
             ))}
           </div>
         </div>
-      </section>
+      </MotionSection>
     </main>
-  );
-}
-
-function MiniPanel({ label, value }) {
-  return (
-    <div className="rounded-xl border border-slate-800 bg-[#0d131c]/80 p-4 transition-all duration-300 hover:border-slate-700">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-2 font-black text-white">{value}</p>
-    </div>
-  );
-}
-
-function WorkflowCard({ title, text, icon: Icon, action, onOpen, index }) {
-  return (
-    <button
-      onClick={onOpen}
-      className="group flex h-full flex-col rounded-2xl border border-slate-800 bg-[#0d131c]/80 p-5 text-left transition-all duration-300 hover:border-emerald-400/60 hover:bg-slate-800/50 hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(16,185,129,0.08)]"
-      style={{ animation: "staggerFade 0.4s ease both", animationDelay: `${index * 0.08}s` }}
-    >
-      <div className="mb-5 grid h-11 w-11 place-items-center rounded-xl bg-slate-800 text-emerald-300 transition-all duration-300 group-hover:bg-emerald-500 group-hover:text-slate-950 group-hover:shadow-[0_0_16px_rgba(16,185,129,0.3)]">
-        <Icon size={22} aria-hidden="true" />
-      </div>
-      <h3 className="text-xl font-extrabold text-white">{title}</h3>
-      <p className="mt-3 flex-1 text-sm leading-6 text-slate-400">{text}</p>
-      <span className="mt-5 text-sm font-bold text-amber-300 flex items-center gap-1 group-hover:gap-2 transition-all">
-        {action}
-        <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
-      </span>
-    </button>
-  );
-}
-
-function FeatureCard({ icon: Icon, title, text, index }) {
-  return (
-    <div
-      className="rounded-2xl border border-slate-800 bg-[#0d131c]/60 p-5 transition-all duration-300 hover:border-indigo-500/40 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(99,102,241,0.08)]"
-      style={{ animation: "staggerFade 0.4s ease both", animationDelay: `${index * 0.06}s` }}
-    >
-      <div className="mb-4 flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-sky-300 border border-slate-800 transition-all duration-300 group-hover:border-sky-500/30">
-          <Icon size={20} aria-hidden="true" />
-        </div>
-        <h3 className="font-extrabold text-white">{title}</h3>
-      </div>
-      <p className="text-sm leading-6 text-slate-400">{text}</p>
-    </div>
   );
 }

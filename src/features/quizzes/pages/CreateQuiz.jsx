@@ -1,11 +1,36 @@
-import { useState, useEffect, useRef } from "react";
-import { PlusCircle, Trash2, Save, Clock, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef, memo, useCallback } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import {
+  PlusCircle,
+  Trash2,
+  Save,
+  Clock,
+  ChevronDown,
+  Sparkles,
+  Upload,
+  Sliders,
+  FileText,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2
+} from "lucide-react";
 import { useToast } from "../../../components/ui/ToastContext";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 
-// ── Custom dark-themed dropdown for correct answer selection ──────────────────
-function CorrectAnswerSelect({ options, value, onChange, hasError }) {
+// ══════════════════════════════════════════════
+//  Reusable components
+// ══════════════════════════════════════════════
+const MotionButton = motion.button;
+const MotionDiv = motion.div;
+
+// Dropdown for correct answer selection
+const CorrectAnswerSelect = memo(function CorrectAnswerSelect({
+  options,
+  value,
+  onChange,
+  hasError
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef();
 
@@ -18,7 +43,9 @@ function CorrectAnswerSelect({ options, value, onChange, hasError }) {
   }, []);
 
   const filtered = options.filter(Boolean);
-  const baseClass = `w-full bg-[#0f1720] border-[1.5px] rounded-xl px-4 py-3 outline-none transition-all duration-150 cursor-pointer flex items-center justify-between ${hasError ? "border-red-500/70" : "border-slate-700/50"} ${open ? "border-indigo-500 bg-indigo-500/[0.05] ring-2 ring-indigo-500/10" : ""}`;
+  const baseClass = `w-full bg-[#0f1720] border-[1.5px] rounded-xl px-4 py-3 outline-none transition-all duration-150 cursor-pointer flex items-center justify-between ${
+    hasError ? "border-red-500/70" : "border-slate-700/50"
+  } ${open ? "border-indigo-500 bg-indigo-500/[0.05] ring-2 ring-indigo-500/10" : ""}`;
 
   return (
     <div className="relative" ref={ref}>
@@ -26,41 +53,173 @@ function CorrectAnswerSelect({ options, value, onChange, hasError }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={baseClass}
+        aria-haspopup="listbox"
+        aria-expanded={open}
       >
-        <span className={value ? "text-slate-100 truncate pr-2" : "text-slate-600 truncate pr-2"}>
+        <span
+          className={value ? "text-slate-100 truncate pr-2" : "text-slate-600 truncate pr-2"}
+        >
           {value || "Correct answer"}
         </span>
         <ChevronDown
           size={16}
-          className={`shrink-0 text-slate-500 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`shrink-0 text-slate-500 transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
         />
       </button>
 
-      {open && filtered.length > 0 && (
-        <div className="absolute z-30 left-0 right-0 mt-1.5 bg-[#0f1720] border border-slate-700/60 rounded-xl shadow-xl shadow-black/50 overflow-hidden animate-fade-in">
-          {filtered.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => {
-                onChange(option);
-                setOpen(false);
-              }}
-              className={`w-full text-left px-4 py-2.5 text-sm transition-colors duration-100 ${
-                value === option
-                  ? "bg-indigo-500/15 text-indigo-300 font-semibold"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      )}
+      <AnimatePresence>
+        {open && filtered.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-30 left-0 right-0 mt-1.5 bg-[#0f1720] border border-slate-700/60 rounded-xl shadow-xl shadow-black/50 overflow-hidden"
+            role="listbox"
+          >
+            {filtered.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="option"
+                aria-selected={value === option}
+                onClick={() => {
+                  onChange(option);
+                  setOpen(false);
+                }}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-colors duration-100 ${
+                  value === option
+                    ? "bg-indigo-500/15 text-indigo-300 font-semibold"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
-}
+});
 
+// Error banner
+const ErrorBanner = memo(function ErrorBanner({ message }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="mb-6 flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3"
+    >
+      <AlertTriangle size={16} className="text-red-400 mt-0.5 shrink-0" />
+      <p className="text-sm text-red-400">{message}</p>
+    </motion.div>
+  );
+});
+
+// Question card (extracted for memoisation)
+const QuestionCard = memo(function QuestionCard({
+  index,
+  item,
+  isOnly,
+  updateQuestion,
+  updateOption,
+  markTouched,
+  touched,
+  inputClass,
+  removeQuestion
+}) {
+  const hasQuestionError = touched[`q${index}`] && !item.question.trim();
+  const hasOptionError = touched[`q${index}_opts`] && item.options.some((o) => !o.trim());
+  const hasCorrectError = touched[`q${index}_correct`] && !item.correctAnswer.trim();
+
+  return (
+    <MotionDiv
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+      className="bg-[#0d131c]/80 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition-colors duration-200"
+    >
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-sm font-bold text-indigo-400">
+            {index + 1}
+          </div>
+          <h2 className="text-xl font-extrabold">Question {index + 1}</h2>
+        </div>
+        {!isOnly && (
+          <button
+            onClick={() => removeQuestion(index)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-red-950/50 border border-red-900/50 text-red-300 hover:bg-red-900/70 px-3 py-2 text-sm font-semibold transition-all duration-200"
+            aria-label="Remove question"
+          >
+            <Trash2 size={13} />
+            Remove
+          </button>
+        )}
+      </div>
+
+      <input
+        value={item.question}
+        onChange={(e) => updateQuestion(index, { question: e.target.value })}
+        onBlur={() => markTouched(`q${index}`)}
+        className={`${inputClass(hasQuestionError)} mb-4`}
+        placeholder="Enter your question"
+      />
+
+      <div className="grid sm:grid-cols-2 gap-3 mb-4">
+        {item.options.map((option, optIdx) => (
+          <div key={optIdx} className="relative">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-600">
+              {String.fromCharCode(65 + optIdx)}
+            </span>
+            <input
+              value={option}
+              onChange={(e) => updateOption(index, optIdx, e.target.value)}
+              onBlur={() => markTouched(`q${index}_opts`)}
+              className={`${inputClass(hasOptionError && !option.trim())} pl-8`}
+              placeholder={`Option ${optIdx + 1}`}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-3">
+        <CorrectAnswerSelect
+          options={item.options}
+          value={item.correctAnswer}
+          onChange={(val) => {
+            updateQuestion(index, { correctAnswer: val });
+            markTouched(`q${index}_correct`);
+          }}
+          hasError={hasCorrectError}
+        />
+        <div className="relative">
+          <Clock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            type="number"
+            min="5"
+            max="120"
+            value={item.timeLimit}
+            onChange={(e) => updateQuestion(index, { timeLimit: e.target.value })}
+            className={`${inputClass(false)} pl-9`}
+            placeholder="Time limit"
+          />
+          <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-600 font-semibold">
+            sec
+          </span>
+        </div>
+      </div>
+    </MotionDiv>
+  );
+});
+
+// ══════════════════════════════════════════════
+//  Helper
+// ══════════════════════════════════════════════
 const emptyQuestion = () => ({
   question: "",
   options: ["", "", "", ""],
@@ -68,21 +227,29 @@ const emptyQuestion = () => ({
   timeLimit: 15
 });
 
+// ══════════════════════════════════════════════
+//  Main Page
+// ══════════════════════════════════════════════
 export default function CreateQuiz() {
   const navigate = useNavigate();
   const { authFetch, user, isAuthenticated, loading: authLoading } = useAuth();
+  const { addToast } = useToast();
+  const prefersReducedMotion = useReducedMotion();
+
   const [title, setTitle] = useState("");
   const [questions, setQuestions] = useState([emptyQuestion()]);
+  const [aiFile, setAiFile] = useState(null);
+  const [aiQuestionCount, setAiQuestionCount] = useState(5);
+  const [aiDifficulty, setAiDifficulty] = useState("Mixed");
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiStatus, setAiStatus] = useState("");
+  const [aiError, setAiError] = useState("");
+  const [aiDescription, setAiDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [touched, setTouched] = useState({});
-  const [mounted, setMounted] = useState(false);
-  const { addToast } = useToast();
 
-  useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 30);
-    return () => clearTimeout(t);
-  }, []);
+
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -90,26 +257,32 @@ export default function CreateQuiz() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  const updateQuestion = (index, updates) => {
+  const updateQuestion = useCallback((index, updates) => {
     setQuestions((items) => items.map((item, i) => (i === index ? { ...item, ...updates } : item)));
-  };
+  }, []);
 
-  const updateOption = (questionIndex, optionIndex, value) => {
+  const updateOption = useCallback((qIdx, optIdx, value) => {
     setQuestions((items) =>
       items.map((item, i) => {
-        if (i !== questionIndex) return item;
+        if (i !== qIdx) return item;
         const options = [...item.options];
-        options[optionIndex] = value;
+        options[optIdx] = value;
         return { ...item, options };
       })
     );
-  };
+  }, []);
 
-  const markTouched = (field) => setTouched((p) => ({ ...p, [field]: true }));
+  const markTouched = useCallback((field) => {
+    setTouched((p) => ({ ...p, [field]: true }));
+  }, []);
+
+  const removeQuestion = useCallback((index) => {
+    setQuestions((items) => items.filter((_, i) => i !== index));
+  }, []);
 
   const saveQuiz = async () => {
     setError("");
-    // Mark all as touched for validation display
+    // Mark all fields touched for validation
     const allTouched = { title: true };
     questions.forEach((_, i) => {
       allTouched[`q${i}`] = true;
@@ -123,18 +296,19 @@ export default function CreateQuiz() {
       addToast("Quiz title is required.", { type: "error" });
       return;
     }
-    for (const item of questions) {
-      if (!item.question.trim()) {
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (!q.question.trim()) {
         setError("Every question needs text.");
         addToast("Every question needs text.", { type: "error" });
         return;
       }
-      if (item.options.some((option) => !option.trim())) {
+      if (q.options.some((o) => !o.trim())) {
         setError("Every question needs four options.");
         addToast("Every question needs four options.", { type: "error" });
         return;
       }
-      if (!item.correctAnswer.trim()) {
+      if (!q.correctAnswer || !String(q.correctAnswer).trim()) {
         setError("Select a correct answer for every question.");
         addToast("Select a correct answer for every question.", { type: "error" });
         return;
@@ -143,28 +317,28 @@ export default function CreateQuiz() {
 
     setSaving(true);
     try {
-      const quizResponse = await authFetch("/api/quizzes", {
+      const quizRes = await authFetch("/api/quizzes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: title.trim(), created_by: user.id })
       }).then((res) => res.json());
 
-      if (!quizResponse.success) throw new Error(quizResponse.message || "Could not create quiz");
+      if (!quizRes.success) throw new Error(quizRes.message || "Could not create quiz");
 
-      for (const item of questions) {
-        const questionResponse = await authFetch("/api/quizzes/question", {
+      for (const q of questions) {
+        const qRes = await authFetch("/api/quizzes/question", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            quiz_id: quizResponse.data.id,
-            question: item.question.trim(),
-            options: item.options.map((option) => option.trim()),
-            correct_answer: item.correctAnswer.trim(),
-            time_limit: Number(item.timeLimit || 15)
+            quiz_id: quizRes.data.id,
+            question: q.question.trim(),
+            options: q.options.map((o) => o.trim()),
+            correct_answer: q.correctAnswer.trim(),
+            time_limit: Number(q.timeLimit || 15)
           })
         }).then((res) => res.json());
 
-        if (!questionResponse.success) throw new Error(questionResponse.message || "Could not save a question");
+        if (!qRes.success) throw new Error(qRes.message || "Could not save a question");
       }
 
       addToast("Quiz created successfully!", { type: "success" });
@@ -177,29 +351,108 @@ export default function CreateQuiz() {
     }
   };
 
-  const inputClass = (hasError) =>
-    `w-full bg-[#0f1720] border-[1.5px] rounded-xl px-4 py-3 outline-none transition-all duration-150 placeholder:text-slate-700 focus:border-indigo-500 focus:bg-indigo-500/[0.05] focus:ring-2 focus:ring-indigo-500/10 ${hasError ? "border-red-500/70" : "border-slate-700/50"}`;
+  const generateQuizWithAI = async () => {
+    setAiError("");
+    setAiStatus("");
+    if (!aiFile) {
+      setAiError("Please upload a document first.");
+      return;
+    }
+    if (!aiQuestionCount || aiQuestionCount < 1 || aiQuestionCount > 50) {
+      setAiError("Number of questions must be between 1 and 50.");
+      return;
+    }
+
+    setAiGenerating(true);
+    setAiStatus("Uploading document and generating quiz...");
+
+    try {
+      const formData = new FormData();
+      formData.append("document", aiFile);
+      formData.append("numberOfQuestions", String(aiQuestionCount));
+      formData.append("difficulty", aiDifficulty);
+
+      const res = await authFetch("/api/ai/generate", {
+        method: "POST",
+        body: formData
+      });
+      const payload = await res.json();
+      if (!payload.success) throw new Error(payload.message || "AI generation failed.");
+
+      const quiz = payload.data;
+      if (!quiz || !Array.isArray(quiz.questions)) throw new Error("Invalid AI response.");
+
+      setTitle(quiz.title || "");
+      setAiDescription(quiz.description || "");
+      setQuestions(
+        quiz.questions.map((item) => {
+          const options = item.options?.slice(0, 4).map((o) => o || "") || ["", "", "", ""];
+          const correct =
+            typeof item.correctAnswer === "number"
+              ? options[item.correctAnswer]
+              : item.correctAnswer || "";
+          return {
+            question: item.question || "",
+            options,
+            correctAnswer: correct,
+            timeLimit: 15
+          };
+        })
+      );
+      setAiStatus("Quiz generated successfully. Review and save when ready.");
+      addToast("AI quiz generated. You can now edit and save it.", { type: "success" });
+    } catch (err) {
+      setAiError(err.message);
+      setAiStatus("");
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  const clearAITool = () => {
+    setAiFile(null);
+    setAiQuestionCount(5);
+    setAiDifficulty("Mixed");
+    setAiStatus("");
+    setAiError("");
+    setAiDescription("");
+  };
+
+  const inputClass = useCallback(
+    (hasError) =>
+      `w-full bg-[#0f1720] border-[1.5px] rounded-xl px-4 py-3 outline-none transition-all duration-150 placeholder:text-slate-700 focus:border-indigo-500 focus:bg-indigo-500/[0.05] focus:ring-2 focus:ring-indigo-500/10 ${
+        hasError ? "border-red-500/70" : "border-slate-700/50"
+      }`,
+    []
+  );
+
+  const fadeUp = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+  };
 
   return (
-    <div
-      className={`min-h-screen bg-[#060a0f] text-white px-4 py-10 relative overflow-hidden transition-opacity duration-700 ${mounted ? "opacity-100" : "opacity-0"}`}
-      
+    <motion.div
+      initial={prefersReducedMotion ? {} : "hidden"}
+      animate="visible"
+      variants={fadeUp}
+      className="min-h-screen bg-[#060a0f] text-white px-4 py-10 relative overflow-hidden"
     >
-      {/* Ambient blobs */}
+      {/* Ambient gradients */}
       <div className="absolute w-[520px] h-[520px] rounded-full bg-indigo-500/8 blur-[90px] -top-32 -right-36 pointer-events-none" />
       <div className="absolute w-[380px] h-[380px] rounded-full bg-violet-500/8 blur-[80px] -bottom-20 -left-16 pointer-events-none" />
 
       <div className="max-w-4xl mx-auto relative">
         {/* Header */}
-        <div className="mb-8">
+        <motion.div
+          variants={fadeUp}
+          className="mb-8"
+        >
           <div className="inline-flex items-center gap-1.5 text-[0.68rem] font-semibold tracking-[0.12em] uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1 mb-3">
             <PlusCircle size={11} />
             Quiz Builder
           </div>
-          <h1
-            className="text-4xl font-extrabold mt-1"
-            
-          >
+          <h1 className="text-4xl font-extrabold mt-1">
             Create{" "}
             <span className="bg-gradient-to-br from-indigo-400 to-violet-400 bg-clip-text text-transparent">
               Quiz
@@ -208,146 +461,220 @@ export default function CreateQuiz() {
           <p className="text-slate-500 text-sm mt-2">
             {questions.length} question{questions.length !== 1 ? "s" : ""} added
           </p>
-        </div>
+        </motion.div>
 
-        {error && (
-          <div className="mb-6 flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 flex-shrink-0" />
-            <p className="text-sm text-red-400">{error}</p>
-          </div>
-        )}
+        {/* Error banner */}
+        <AnimatePresence>
+          {error && <ErrorBanner message={error} />}
+        </AnimatePresence>
 
-        {/* Title */}
-        <div className="bg-[#0d131c]/80 border border-slate-800 rounded-2xl p-6 mb-5">
-          <label className="text-[0.68rem] font-semibold tracking-[0.08em] uppercase text-slate-500 mb-2 block">Quiz Title</label>
+        {/* Title input */}
+        <motion.div
+          variants={fadeUp}
+          className="bg-[#0d131c]/80 border border-slate-800 rounded-2xl p-6 mb-5"
+        >
+          <label className="text-[0.68rem] font-semibold tracking-[0.08em] uppercase text-slate-500 mb-2 block">
+            Quiz Title
+          </label>
           <input
             value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            onChange={(e) => setTitle(e.target.value)}
             onBlur={() => markTouched("title")}
             className={inputClass(touched.title && !title.trim())}
             placeholder="e.g. Computer Science Basics"
-            
           />
           {touched.title && !title.trim() && (
             <p className="text-xs text-red-400 mt-1.5">Title is required</p>
           )}
-        </div>
+        </motion.div>
 
-        {/* Questions */}
-        <div className="space-y-5">
-          {questions.map((item, index) => (
-            <div
-              key={index}
-              className="bg-[#0d131c]/80 border border-slate-800 rounded-2xl p-6 transition-all duration-300 hover:border-slate-700"
-              style={{ animation: "staggerFade 0.4s ease both", animationDelay: `${index * 0.05}s` }}
-            >
-              <div className="flex items-center justify-between gap-3 mb-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-sm font-bold text-indigo-400">
-                    {index + 1}
-                  </div>
-                  <h2 className="text-xl font-extrabold" >
-                    Question {index + 1}
-                  </h2>
-                </div>
-                {questions.length > 1 && (
-                  <button
-                    onClick={() => setQuestions((items) => items.filter((_, i) => i !== index))}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-red-950/50 border border-red-900/50 text-red-300 hover:bg-red-900/70 px-3 py-2 text-sm font-semibold transition-all duration-200"
-                  >
-                    <Trash2 size={13} />
-                    Remove
-                  </button>
-                )}
+        {/* AI Generation Section */}
+        <motion.div
+          variants={fadeUp}
+          className="bg-[#0d131c]/80 border border-slate-800 rounded-2xl p-6 mb-5"
+        >
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-violet-500/15 border border-violet-500/25 flex items-center justify-center">
+                <Sparkles size={16} className="text-violet-400" />
               </div>
-
-              <input
-                value={item.question}
-                onChange={(event) => updateQuestion(index, { question: event.target.value })}
-                onBlur={() => markTouched(`q${index}`)}
-                className={`${inputClass(touched[`q${index}`] && !item.question.trim())} mb-4`}
-                placeholder="Enter your question"
-                
-              />
-
-              <div className="grid sm:grid-cols-2 gap-3 mb-4">
-                {item.options.map((option, optionIndex) => (
-                  <div key={optionIndex} className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-600">
-                      {String.fromCharCode(65 + optionIndex)}
-                    </span>
-                    <input
-                      value={option}
-                      onChange={(event) => updateOption(index, optionIndex, event.target.value)}
-                      onBlur={() => markTouched(`q${index}_opts`)}
-                      className={`${inputClass(touched[`q${index}_opts`] && !option.trim())} pl-8`}
-                      placeholder={`Option ${optionIndex + 1}`}
-                      
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div>
-                  <CorrectAnswerSelect
-                    options={item.options}
-                    value={item.correctAnswer}
-                    onChange={(val) => {
-                      updateQuestion(index, { correctAnswer: val });
-                      markTouched(`q${index}_correct`);
-                    }}
-                    hasError={touched[`q${index}_correct`] && !item.correctAnswer.trim()}
-                  />
-                </div>
-                <div className="relative">
-                  <Clock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input
-                    type="number"
-                    min="5"
-                    max="120"
-                    value={item.timeLimit}
-                    onChange={(event) => updateQuestion(index, { timeLimit: event.target.value })}
-                    className={`${inputClass(false)} pl-9`}
-                    placeholder="Time limit"
-                    
-                  />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-600 font-semibold">sec</span>
-                </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-200">Generate with AI</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Upload a document and create a quiz automatically
+                </p>
               </div>
             </div>
-          ))}
+            <button
+              type="button"
+              onClick={clearAITool}
+              className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-indigo-500 hover:text-indigo-300 transition"
+            >
+              Reset
+            </button>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 mb-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-400 mb-1.5 flex items-center gap-1.5">
+                <Upload size={12} />
+                Document
+              </label>
+              <input
+                type="file"
+                accept=".pdf,.docx,.txt"
+                onChange={(e) => setAiFile(e.target.files?.[0] || null)}
+                className={inputClass(false)}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-400 mb-1.5 flex items-center gap-1.5">
+                <Sliders size={12} />
+                Number of questions
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="50"
+                value={aiQuestionCount}
+                onChange={(e) => setAiQuestionCount(Number(e.target.value))}
+                className={inputClass(false)}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-400 mb-1.5 flex items-center gap-1.5">
+                <Sliders size={12} />
+                Difficulty
+              </label>
+              <select
+                value={aiDifficulty}
+                onChange={(e) => setAiDifficulty(e.target.value)}
+                className={inputClass(false)}
+              >
+                <option value="Mixed">Mixed</option>
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+              </select>
+            </div>
+            <div className="flex items-end">
+              <MotionButton
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={generateQuizWithAI}
+                disabled={aiGenerating}
+                className="w-full rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 px-4 py-3 text-sm font-bold transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {aiGenerating ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Generating…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={14} />
+                    Generate with AI
+                  </>
+                )}
+              </MotionButton>
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {aiStatus && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-3 text-sm text-indigo-200 flex items-center gap-2"
+              >
+                <CheckCircle2 size={14} className="text-indigo-400" />
+                {aiStatus}
+              </motion.div>
+            )}
+            {aiError && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-3 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-200 flex items-center gap-2"
+              >
+                <AlertTriangle size={14} className="text-red-400" />
+                {aiError}
+              </motion.div>
+            )}
+            {aiDescription && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="rounded-xl border border-slate-700/60 bg-slate-950/40 px-4 py-3 text-sm text-slate-300"
+              >
+                <p className="font-semibold text-slate-100 mb-2 flex items-center gap-1.5">
+                  <FileText size={12} />
+                  AI Description
+                </p>
+                <p>{aiDescription}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Questions list */}
+        <div className="space-y-5">
+          <AnimatePresence>
+            {questions.map((item, index) => (
+              <QuestionCard
+                key={index}
+                index={index}
+                item={item}
+                isOnly={questions.length === 1}
+                updateQuestion={updateQuestion}
+                updateOption={updateOption}
+                markTouched={markTouched}
+                touched={touched}
+                inputClass={inputClass}
+                removeQuestion={removeQuestion}
+              />
+            ))}
+          </AnimatePresence>
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-wrap gap-3 mt-6">
-          <button
+        {/* Bottom actions */}
+        <motion.div
+          variants={fadeUp}
+          className="flex flex-wrap gap-3 mt-6"
+        >
+          <MotionButton
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setQuestions((items) => [...items, emptyQuestion()])}
-            className="rounded-2xl border-2 border-dashed border-slate-700 hover:border-indigo-500/50 px-5 py-3 font-bold text-slate-400 hover:text-indigo-400 transition-all duration-200 flex items-center gap-2"
+            className="rounded-2xl border-2 border-dashed border-slate-700 hover:border-indigo-500/50 px-5 py-3 font-bold text-slate-400 hover:text-indigo-400 transition-colors duration-200 flex items-center gap-2"
           >
             <PlusCircle size={16} />
             Add Question
-          </button>
-          <button
+          </MotionButton>
+          <MotionButton
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={saveQuiz}
             disabled={saving}
-            className="btn-shimmer rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 px-6 py-3 font-bold shadow-[0_4px_16px_rgba(99,102,241,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(99,102,241,0.35)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center gap-2"
-            
+            className="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 px-6 py-3 font-bold shadow-[0_4px_16px_rgba(99,102,241,0.25)] hover:shadow-[0_6px_24px_rgba(99,102,241,0.35)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none flex items-center gap-2"
           >
             {saving ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Saving...
-              </span>
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Saving…
+              </>
             ) : (
               <>
                 <Save size={16} />
                 Save Quiz
               </>
             )}
-          </button>
-        </div>
+          </MotionButton>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
