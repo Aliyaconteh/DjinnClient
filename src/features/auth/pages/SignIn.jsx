@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogIn, Eye, EyeOff } from "lucide-react";
+import { LogIn, Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { apiUrl } from "../../../config/api";
 import { supabase } from "../../../services/supabase/supabaseClient";
@@ -17,9 +17,62 @@ function GoogleIcon() {
   );
 }
 
+// Original flat-style illustration for the welcome panel.
+// Three friendly characters standing together — no reference to any
+// existing IP, purely generic shapes/colors for this login screen.
+function WelcomeIllustration() {
+  return (
+    <svg viewBox="0 0 300 190" className="w-full h-full" aria-hidden="true">
+      <defs>
+        <clipPath id="panelClip">
+          <rect x="0" y="0" width="300" height="190" rx="0" />
+        </clipPath>
+      </defs>
+      <g clipPath="url(#panelClip)">
+        {/* Navy accent blob, top right */}
+        <circle cx="256" cy="24" r="34" fill="#16213E" />
+        {/* Ground shadow */}
+        <ellipse cx="150" cy="182" rx="120" ry="10" fill="#F5A800" opacity="0.25" />
+
+        {/* Character left */}
+        <g transform="translate(58,58)">
+          <path d="M-30 92 Q-30 40 0 40 Q30 40 30 92 Z" fill="#16213E" />
+          <circle cx="0" cy="14" r="26" fill="#FFD9A8" />
+          <path d="M-26 6 Q-26 -22 0 -22 Q26 -22 26 6 Q14 -6 0 -6 Q-14 -6 -26 6 Z" fill="#16213E" />
+          <circle cx="-9" cy="16" r="2.6" fill="#16213E" />
+          <circle cx="9" cy="16" r="2.6" fill="#16213E" />
+          <path d="M-7 26 Q0 31 7 26" stroke="#16213E" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+        </g>
+
+        {/* Character middle (taller) */}
+        <g transform="translate(150,42)">
+          <path d="M-34 108 Q-34 48 0 48 Q34 48 34 108 Z" fill="#2F5FFF" />
+          <circle cx="0" cy="18" r="29" fill="#FFD9A8" />
+          <path d="M-29 10 Q-32 -24 0 -26 Q32 -24 29 10 Q16 -8 0 -8 Q-16 -8 -29 10 Z" fill="#0F172A" />
+          <circle cx="-10" cy="20" r="2.8" fill="#16213E" />
+          <circle cx="10" cy="20" r="2.8" fill="#16213E" />
+          <path d="M-8 31 Q0 37 8 31" stroke="#16213E" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+          <path d="M52 -6 l6 -8 M60 -10 l6 -6 M46 -16 l4 -9" stroke="#F5A800" strokeWidth="3" strokeLinecap="round" />
+        </g>
+
+        {/* Character right */}
+        <g transform="translate(238,60)">
+          <path d="M-28 88 Q-28 38 0 38 Q28 38 28 88 Z" fill="#F5A800" />
+          <circle cx="0" cy="13" r="25" fill="#FFD9A8" />
+          <path d="M-25 4 Q-25 -20 0 -20 Q25 -20 25 4 L25 12 Q18 2 0 2 Q-18 2 -25 12 Z" fill="#5B3A22" />
+          <circle cx="-8" cy="15" r="6" fill="none" stroke="#16213E" strokeWidth="1.6" />
+          <circle cx="8" cy="15" r="6" fill="none" stroke="#16213E" strokeWidth="1.6" />
+          <line x1="-2" y1="15" x2="2" y2="15" stroke="#16213E" strokeWidth="1.6" />
+          <path d="M-6 25 Q0 29 6 25" stroke="#16213E" strokeWidth="2" fill="none" strokeLinecap="round" />
+        </g>
+      </g>
+    </svg>
+  );
+}
+
 export default function SignIn() {
   const navigate = useNavigate();
-  const { login, setError } = useAuth();
+  const { login, setError, theme } = useAuth();
   const { addToast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -153,147 +206,126 @@ export default function SignIn() {
 
   return (
     <div
-      className={`min-h-screen bg-[#060a0f] flex items-center justify-center p-6 relative overflow-hidden transition-opacity duration-700 ${mounted ? "opacity-100" : "opacity-0"}`}
-      
+      className={`min-h-[100dvh] w-full flex flex-col relative transition-opacity duration-700 ${mounted ? "opacity-100" : "opacity-0"} ${theme === "dark" ? "bg-slate-950" : "bg-white"}`}
     >
-      {/* Background grid */}
-      <svg aria-hidden="true" className="absolute inset-0 w-full h-full opacity-[0.035] pointer-events-none">
-        <defs>
-          <pattern id="si-dots" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
-            <circle cx="1.5" cy="1.5" r="1.5" fill="#6366f1" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#si-dots)" />
-      </svg>
+      {/* Illustration panel — full width hero band */}
+      <div className="relative bg-[#F5A800] w-full h-[200px] sm:h-[240px] overflow-hidden shrink-0">
+        <WelcomeIllustration />
+      </div>
 
-      {/* Ambient blobs */}
-      <div className="absolute w-[520px] h-[520px] rounded-full bg-blue-500/10 blur-[90px] -top-32 -right-36 pointer-events-none" />
-      <div className="absolute w-[380px] h-[380px] rounded-full bg-indigo-500/10 blur-[80px] -bottom-20 -left-16 pointer-events-none" />
-
-      {/* Card */}
-      <div
-        className={`relative w-full max-w-[440px] bg-[#0d131c]/90 border border-blue-500/[0.14] rounded-3xl px-8 py-10 shadow-2xl transition-all duration-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}
-      >
-        {/* Top shimmer line */}
-        <div className="absolute top-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent rounded-full" />
-
-        {/* Badge */}
-        <div className="flex items-center gap-2 mb-5">
-          <div className="inline-flex items-center gap-1.5 text-[0.68rem] font-semibold tracking-[0.12em] uppercase text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-full px-3 py-1">
-            <LogIn size={11} />
-            Sign In
-          </div>
-        </div>
-
-        {/* Heading */}
-        <h1
-          className="text-[2rem] font-extrabold text-slate-100 leading-tight mb-1.5"
-          
+      {/* Content */}
+      <div className="flex-1 flex items-center justify-center px-6 py-8">
+        <div
+          className={`w-full max-w-[420px] transition-all duration-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}
         >
-          Welcome{" "}
-          <em className="not-italic bg-gradient-to-br from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-            Back
-          </em>
-        </h1>
-        <p className="text-sm text-slate-500 mb-6">Sign in to manage your quizzes and rooms</p>
+          {/* Heading */}
+          <h1 className={`text-[1.7rem] font-extrabold text-center leading-tight ${theme === "dark" ? "text-slate-100" : "text-[#16213E]"}`}>
+            Welcome Back
+          </h1>
+          <p className="text-sm text-slate-400 text-center mt-1.5 mb-6">
+            Sign in to manage your quizzes and rooms
+          </p>
 
-        <button
-          type="button"
-          onClick={continueWithGoogle}
-          disabled={googleLoading || loading}
-          className="w-full mb-6 py-3.5 rounded-2xl font-bold text-[0.9375rem] tracking-wide text-slate-900 bg-white border border-slate-200 shadow-[0_4px_18px_rgba(15,23,42,0.2)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
-        >
-          {googleLoading ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="w-4 h-4 border-2 border-slate-400/40 border-t-slate-900 rounded-full animate-spin" />
-              Connecting...
-            </span>
-          ) : (
-            <>
-              <GoogleIcon />
-              Continue with Google
-            </>
-          )}
-        </button>
-
-        <div className="flex items-center gap-2.5 text-[0.7rem] tracking-wide text-slate-700 mb-6">
-          <span className="flex-1 h-px bg-slate-800" />
-          or sign in with email
-          <span className="flex-1 h-px bg-slate-800" />
-        </div>
-
-        <div className="flex flex-col gap-5">
-          {/* Email */}
-          <div>
-            <div className="text-[0.68rem] font-semibold tracking-[0.08em] uppercase text-slate-500 mb-2">Email</div>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: undefined })); }}
-              onKeyDown={(e) => e.key === "Enter" && signIn()}
-              className={`w-full bg-[#0f1720] border-[1.5px] rounded-xl px-4 py-3 text-slate-100 text-[0.9375rem] outline-none placeholder:text-slate-700 transition-all duration-150 focus:border-blue-500 focus:bg-blue-500/[0.05] focus:ring-2 focus:ring-blue-500/10 ${errors.email ? "border-red-500/70" : "border-slate-700/50"}`}
-              
-            />
-            {errors.email && <p className="text-xs text-red-400 mt-1.5">{errors.email}</p>}
-          </div>
-
-          {/* Password */}
-          <div>
-            <div className="text-[0.68rem] font-semibold tracking-[0.08em] uppercase text-slate-500 mb-2">Password</div>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); setErrors((p) => ({ ...p, password: undefined })); }}
-                onKeyDown={(e) => e.key === "Enter" && signIn()}
-                className={`w-full bg-[#0f1720] border-[1.5px] rounded-xl px-4 py-3 pr-11 text-slate-100 text-[0.9375rem] outline-none placeholder:text-slate-700 transition-all duration-150 focus:border-blue-500 focus:bg-blue-500/[0.05] focus:ring-2 focus:ring-blue-500/10 ${errors.password ? "border-red-500/70" : "border-slate-700/50"}`}
-                
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-            {errors.password && <p className="text-xs text-red-400 mt-1.5">{errors.password}</p>}
-          </div>
-
-          {/* Submit */}
+          {/* Google button */}
           <button
-            onClick={signIn}
-            disabled={loading || googleLoading}
-            className="btn-shimmer w-full mt-1 py-3.5 rounded-2xl font-bold text-[0.9375rem] tracking-wide text-white bg-gradient-to-br from-blue-600 to-indigo-600 shadow-[0_4px_20px_rgba(59,130,246,0.28),0_1px_3px_rgba(0,0,0,0.3)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(59,130,246,0.4)] active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
-            
+            type="button"
+            onClick={continueWithGoogle}
+            disabled={googleLoading || loading}
+            className={`w-full mb-5 py-3.5 rounded-full font-semibold text-[0.9rem] border-2 shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2 ${theme === "dark" ? "bg-slate-900/90 border-slate-700 text-slate-200 hover:border-indigo-500/60" : "bg-white border-slate-200 text-[#16213E] hover:border-slate-300 hover:shadow-md"}`}
           >
-            {loading ? (
+            {googleLoading ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Signing in...
+                <span className={`w-4 h-4 border-2 rounded-full animate-spin ${theme === "dark" ? "border-slate-600 border-t-slate-200" : "border-slate-300 border-t-[#16213E]"}`} />
+                Connecting...
               </span>
             ) : (
               <>
-                <LogIn size={16} />
-                Sign In
+                <GoogleIcon />
+                Continue with Google
               </>
             )}
           </button>
-        </div>
 
-        {/* Footer */}
-        <p className="text-center text-sm text-slate-500 mt-6">
-          Don't have an account?{" "}
-          <button
-            onClick={() => navigate("/signup")}
-            className="text-blue-400 font-semibold hover:text-blue-300 transition-colors"
-          >
-            Sign up
-          </button>
-        </p>
+          <div className="flex items-center gap-2.5 text-[0.7rem] tracking-wide text-slate-400 mb-5">
+            <span className={`flex-1 h-px ${theme === "dark" ? "bg-slate-800" : "bg-slate-200"}`} />
+            or sign in with email
+            <span className={`flex-1 h-px ${theme === "dark" ? "bg-slate-800" : "bg-slate-200"}`} />
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {/* Email */}
+            <div>
+              <div className={`flex items-center gap-2.5 border-[1.5px] rounded-2xl px-4 py-3 transition-all duration-150 ${theme === "dark" ? "bg-slate-900/80 focus-within:border-indigo-400 focus-within:bg-indigo-500/[0.06]" : "bg-[#F7F8FC] focus-within:border-[#2F5FFF] focus-within:bg-[#2F5FFF]/[0.04]"} ${errors.email ? "border-red-400" : theme === "dark" ? "border-slate-800" : "border-transparent"}`}>
+                <Mail size={16} className="text-slate-400 shrink-0" />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: undefined })); }}
+                  onKeyDown={(e) => e.key === "Enter" && signIn()}
+                  className={`w-full bg-transparent text-[0.9375rem] outline-none placeholder:text-slate-400 ${theme === "dark" ? "text-slate-100" : "text-[#16213E]"}`}
+                />
+              </div>
+              {errors.email && <p className="text-xs text-red-500 mt-1.5 ml-1">{errors.email}</p>}
+            </div>
+
+            {/* Password */}
+            <div>
+              <div className={`flex items-center gap-2.5 border-[1.5px] rounded-2xl px-4 py-3 transition-all duration-150 ${theme === "dark" ? "bg-slate-900/80 focus-within:border-indigo-400 focus-within:bg-indigo-500/[0.06]" : "bg-[#F7F8FC] focus-within:border-[#2F5FFF] focus-within:bg-[#2F5FFF]/[0.04]"} ${errors.password ? "border-red-400" : theme === "dark" ? "border-slate-800" : "border-transparent"}`}>
+                <Lock size={16} className="text-slate-400 shrink-0" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setErrors((p) => ({ ...p, password: undefined })); }}
+                  onKeyDown={(e) => e.key === "Enter" && signIn()}
+                  className={`w-full bg-transparent text-[0.9375rem] outline-none placeholder:text-slate-400 ${theme === "dark" ? "text-slate-100" : "text-[#16213E]"}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="text-slate-400 hover:text-slate-300 transition-colors shrink-0"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {errors.password && <p className="text-xs text-red-500 mt-1.5 ml-1">{errors.password}</p>}
+            </div>
+
+            {/* Submit */}
+            <button
+              onClick={signIn}
+              disabled={loading || googleLoading}
+              className="w-full mt-1 py-3.5 rounded-full font-bold text-[0.9375rem] tracking-wide text-white bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-purple-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-purple-500/40 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Signing in...
+                </span>
+              ) : (
+                <>
+                  <LogIn size={16} />
+                  Login
+                </>
+              )}
+            </button>
+
+           
+          </div>
+
+          {/* Footer */}
+          <p className="text-center text-sm text-slate-400 mt-6">
+            Don't have an account?{" "}
+            <button
+              onClick={() => navigate("/signup")}
+              className="text-indigo-400 font-semibold hover:text-indigo-300 transition-colors"
+            >
+              Sign up
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );
